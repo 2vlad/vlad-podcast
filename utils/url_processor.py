@@ -46,6 +46,10 @@ class YouTubeURLProcessor:
     - https://youtu.be/VIDEO_ID
     - https://www.youtube.com/watch?v=VIDEO_ID&list=PLAYLIST_ID
     - https://m.youtube.com/watch?v=VIDEO_ID
+    - https://www.youtube.com/live/VIDEO_ID (live streams)
+    - https://www.youtube.com/shorts/VIDEO_ID (YouTube Shorts)
+    - https://www.youtube.com/embed/VIDEO_ID (embedded videos)
+    - https://www.youtube.com/v/VIDEO_ID (old format)
     """
     
     # YouTube video ID: 11 characters, alphanumeric, underscore, hyphen
@@ -123,6 +127,12 @@ class YouTubeURLProcessor:
             # Handle /v/VIDEO_ID format
             elif parsed.path.startswith('/v/'):
                 video_id = parsed.path.split('/v/')[-1]
+            # Handle /live/VIDEO_ID format (live streams)
+            elif parsed.path.startswith('/live/'):
+                video_id = parsed.path.split('/live/')[-1]
+            # Handle /shorts/VIDEO_ID format (YouTube Shorts)
+            elif parsed.path.startswith('/shorts/'):
+                video_id = parsed.path.split('/shorts/')[-1]
         
         if not video_id:
             raise InvalidYouTubeURLError(
