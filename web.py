@@ -231,6 +231,28 @@ def get_config():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/media/<path:filename>')
+def serve_media(filename):
+    """Serve media files."""
+    try:
+        settings = get_settings()
+        return send_from_directory(settings.media_dir, filename)
+    except Exception as e:
+        logger.error(f"Failed to serve media file {filename}: {e}")
+        return jsonify({'error': 'File not found'}), 404
+
+
+@app.route('/rss.xml')
+def serve_rss():
+    """Serve RSS feed."""
+    try:
+        settings = get_settings()
+        return send_from_directory(settings.podcast_dir, 'rss.xml', mimetype='application/rss+xml')
+    except Exception as e:
+        logger.error(f"Failed to serve RSS feed: {e}")
+        return jsonify({'error': 'RSS feed not found'}), 404
+
+
 if __name__ == '__main__':
     # Check configuration
     try:
