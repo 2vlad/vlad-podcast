@@ -145,28 +145,6 @@ function showStatus(message) {
     }
 }
 
-function showResult(data) {
-    hideAll();
-    inputGroup.classList.remove('processing');
-    submitBtn.disabled = false;
-    
-    result.style.display = 'block';
-    
-    if (data.duplicate) {
-        resultTitle.textContent = 'Уже в фиде';
-        resultMeta.textContent = data.title || '';
-        resultFile.textContent = '';
-    } else {
-        resultTitle.textContent = data.title || 'Готово';
-        resultMeta.textContent = data.duration ? `Длительность: ${data.duration}` : '';
-        resultFile.textContent = data.file_name || '';
-    }
-    
-    // Clear input
-    urlInput.value = '';
-    currentJobId = null;
-}
-
 function showError(message) {
     hideAll();
     inputGroup.classList.remove('processing');
@@ -194,4 +172,128 @@ function hideAll() {
 // Auto-focus input on load
 window.addEventListener('load', () => {
     urlInput.focus();
+    loadEpisodes();
 });
+
+// Episodes management
+const episodesList = document.getElementById('episodesList');
+const episodesCount = document.getElementById('episodesCount');
+
+function loadEpisodes() {
+    fetch('/api/episodes')
+        .then(res => res.json())
+        .then(data => {
+            if (data.episodes && data.episodes.length > 0) {
+                displayEpisodes(data.episodes);
+                episodesCount.textContent = data.episodes.length;
+            } else {
+                showEmptyEpisodes();
+            }
+        })
+        .catch(err => {
+            console.error('Failed to load episodes:', err);
+            showEmptyEpisodes();
+        });
+}
+
+function displayEpisodes(episodes) {
+    episodesList.innerHTML = '';
+    
+    episodes.forEach(episode => {
+        const episodeItem = createEpisodeItem(episode);
+        episodesList.appendChild(episodeItem);
+    });
+}
+
+function createEpisodeItem(episode) {
+    const item = document.createElement('a');
+    item.className = 'episode-item';
+    item.href = episode.link || '#';
+    item.target = '_blank';
+    item.rel = 'noopener noreferrer';
+    
+    // Format date
+    const date = formatDate(episode.pub_date);
+    
+    item.innerHTML = `
+        <div class="episode-header">
+            <div class="episode-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+            </div>
+            <div class="episode-info">
+                <div class="episode-title">${escapeHtml(episode.title)}</div>
+                <div class="episode-meta">
+                    ${episode.duration ? `<span class="episode-duration">${episode.duration}</span>` : ''}
+                    ${date ? `<span class="episode-date">${date}</span>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return item;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) return 'Сегодня';
+        if (diffDays === 1) return 'Вчера';
+        if (diffDays < 7) return `${diffDays} дн. назад`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} нед. назад`;
+        
+        // Format as DD.MM.YYYY
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
+    } catch (e) {
+        return '';
+    }
+}
+
+function showEmptyEpisodes() {
+    episodesList.innerHTML = '<div class="episodes-empty">Эпизоды появятся здесь после добавления</div>';
+    episodesCount.textContent = '0';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Reload episodes after successful addition
+function showResult(data) {
+    hideAll();
+    inputGroup.classList.remove('processing');
+    submitBtn.disabled = false;
+    
+    result.style.display = 'block';
+    
+    if (data.duplicate) {
+        resultTitle.textContent = 'Уже в фиде';
+        resultMeta.textContent = data.title || '';
+        resultFile.textContent = '';
+    } else {
+        resultTitle.textContent = data.title || 'Готово';
+        resultMeta.textContent = data.duration ? `Длительность: ${data.duration}` : '';
+        resultFile.textContent = data.file_name || '';
+        
+        // Reload episodes list after successful addition
+        setTimeout(() => {
+            loadEpisodes();
+        }, 1000);
+    }
+    
+    // Clear input
+    urlInput.value = '';
+    currentJobId = null;
+}

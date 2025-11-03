@@ -231,6 +231,63 @@ def get_config():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/episodes')
+def get_episodes():
+    """Get list of episodes from RSS feed."""
+    try:
+        settings = get_settings()
+        
+        # Check if RSS file exists
+        if not settings.rss_file.exists():
+            return jsonify({'episodes': []})
+        
+        # Parse RSS feed
+        from feedgen.feed import FeedGenerator
+        fg = FeedGenerator()
+        fg.load_extension('podcast')
+        
+        with open(settings.rss_file, 'r', encoding='utf-8') as f:
+            import xml.etree.ElementTree as ET
+            tree = ET.parse(f)
+            root = tree.getroot()
+            
+            episodes = []
+            channel = root.find('channel')
+            
+            if channel is not None:
+                for item in channel.findall('item'):
+                    title_elem = item.find('title')
+                    link_elem = item.find('link')
+                    pub_date_elem = item.find('pubDate')
+                    duration_elem = item.find('{http://www.itunes.com/dtds/podcast-1.0.dtd}duration')
+                    enclosure_elem = item.find('enclosure')
+                    guid_elem = item.find('guid')
+                    
+                    episode = {
+                        'title': title_elem.text if title_elem is not None else 'Unknown',
+                        'link': link_elem.text if link_elem is not None else '',
+                        'pub_date': pub_date_elem.text if pub_date_elem is not None else '',
+                        'duration': duration_elem.text if duration_elem is not None else '',
+                        'guid': guid_elem.text if guid_elem is not None else '',
+                    }
+                    
+                    if enclosure_elem is not None:
+                        episode['audio_url'] = enclosure_elem.get('url', '')
+                        episode['file_size'] = enclosure_elem.get('length', '0')
+                        episode['mime_type'] = enclosure_elem.get('type', '')
+                    
+                    episodes.append(episode)
+            
+            return jsonify({
+                'episodes': episodes,
+                'count': len(episodes)
+            })
+            
+    except Exception as e:
+        logger.error(f"Failed to get episodes: {e}")
+        return jsonify({'error': str(e), 'episodes': []}), 500
+
+
 @app.route('/media/<path:filename>')
 def serve_media(filename):
     """Serve media files."""
