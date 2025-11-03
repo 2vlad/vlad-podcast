@@ -134,10 +134,11 @@ def process_video_job(job_id: int, url: str):
                     branch=settings.github_branch
                 )
                 
-                # Publish (git add, commit, push)
+                # Publish (sync RSS to docs, git add, commit, push)
                 publish_success = publisher.publish(
                     episode_title=metadata.title,
-                    patterns=["podcast/"]
+                    rss_file=settings.rss_file,
+                    patterns=["docs/"]
                 )
                 
                 if publish_success:
