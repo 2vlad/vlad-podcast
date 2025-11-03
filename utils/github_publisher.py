@@ -14,16 +14,18 @@ logger = logging.getLogger("github_publisher")
 class GitHubPublisher:
     """Automatically publish podcast files to GitHub Pages."""
     
-    def __init__(self, repo_path: Path, branch: str = "main"):
+    def __init__(self, repo_path: Path, branch: str = "main", docs_dir: Optional[Path] = None):
         """
         Initialize GitHub publisher.
         
         Args:
             repo_path: Path to git repository
             branch: Git branch to push to (default: main)
+            docs_dir: Path to docs directory (default: repo_path/docs)
         """
         self.repo_path = Path(repo_path)
         self.branch = branch
+        self.docs_dir = docs_dir or (self.repo_path / "docs")
         
     def _run_git_command(self, command: list[str]) -> tuple[bool, str]:
         """
@@ -63,18 +65,44 @@ class GitHubPublisher:
             return len(output.strip()) > 0
         return False
     
+    def sync_rss_to_docs(self, rss_file: Path) -> bool:
+        """
+        Copy RSS file to docs directory for GitHub Pages.
+        
+        Args:
+            rss_file: Path to source RSS file
+            
+        Returns:
+            True if successful
+        """
+        import shutil
+        
+        try:
+            # Ensure docs directory exists
+            self.docs_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Copy RSS file
+            dest_rss = self.docs_dir / "rss.xml"
+            shutil.copy2(rss_file, dest_rss)
+            
+            logger.info(f"Synced RSS file to {dest_rss}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync RSS file: {e}")
+            return False
+    
     def add_files(self, patterns: list[str] = None) -> bool:
         """
         Add files to git staging area.
         
         Args:
-            patterns: List of file patterns to add (default: ["podcast/"])
+            patterns: List of file patterns to add (default: ["docs/"])
             
         Returns:
             True if successful
         """
         if patterns is None:
-            patterns = ["podcast/"]
+            patterns = ["docs/"]
         
         for pattern in patterns:
             success, output = self._run_git_command(["git", "add", pattern])
@@ -145,18 +173,25 @@ class GitHubPublisher:
             logger.error(f"Push failed: {output}")
             return False
     
-    def publish(self, episode_title: str, patterns: list[str] = None) -> bool:
+    def publish(self, episode_title: str, rss_file: Optional[Path] = None, patterns: list[str] = None) -> bool:
         """
-        Full publish cycle: add, commit, push.
+        Full publish cycle: sync RSS, add, commit, push.
         
         Args:
             episode_title: Title of the episode for commit message
-            patterns: File patterns to add (default: ["podcast/"])
+            rss_file: Optional path to RSS file to sync to docs
+            patterns: File patterns to add (default: ["docs/"])
             
         Returns:
             True if successful
         """
         logger.info(f"Starting publish for: {episode_title}")
+        
+        # Sync RSS file to docs if provided
+        if rss_file:
+            if not self.sync_rss_to_docs(rss_file):
+                logger.error("Failed to sync RSS file")
+                return False
         
         # Check if there are changes
         if not self.check_git_status():
