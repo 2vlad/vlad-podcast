@@ -6,36 +6,88 @@
     <description>Запаиси для прогулок</description>
     <atom:link href="https://2vlad.github.io/vlad-podcast/rss.xml" rel="self" type="application/rss+xml"/>
     <docs>http://www.rssboard.org/rss-specification</docs>
-    <generator>YouTube to Podcast v0.1.0</generator>
-    <language>ru</language>
-    <lastBuildDate>Mon, 03 Nov 2025 17:54:39 +0000</lastBuildDate>
+    <generator>python-feedgen</generator>
+    <lastBuildDate>Mon, 03 Nov 2025 18:27:37 +0000</lastBuildDate>
     <itunes:author>Влад</itunes:author>
     <itunes:category text="Leisure"/>
-    <itunes:explicit>no</itunes:explicit>
-    <itunes:owner>
-      <itunes:name>Влад</itunes:name>
-      <itunes:email>podcast@example.com</itunes:email>
-    </itunes:owner>
     <item>
-      <title>AI is a commodity?</title>
-      <link>https://www.youtube.com/watch?v=I4jbVyOqZgA</link>
-      <description>AI industry is in a race to build smart and more intelligent models (GPT, Gemini, Claude, Grok, Llama) and we are largely constrained and powered by compute. How does access to compute determine and influence the scientific breakthroughs and research that tends to happen in bursts? Who owns access to intelligence? How does relationship with neoclouds and hyperscalers help frontier labs help innovate and have a moat?
+      <title>Щелин: ядерный апокалипсис, новая идеология России и АнтИИХрист || Не выходя из комнаты</title>
+      <link>https://www.youtube.com/watch?v=VP2ghYBpne8</link>
+      <description>Мир вокруг готовится к эскалации. Трамп возобновляет ядерные испытания. Россия пробует новые формы оружия и грозит "ошеломляющим ответом". ЕС ждёт вторжения в Прибалтику. На этом фоне снимаются фильмы о новой угрозе ядерного конфликта, где ракеты буквально летят на США. Мир сползает в апокалипсис? Почему его вокруг так много? Разобрались с философом Павлом Щелиным. 
 
-#ai #llm #technology #business 
+Ещё поговорили о том, как в этом новом мире России найти собственный путь. Нужна ли России идеология и возможно ли вообще сформулировать идеологию сверху? В чём она может заключаться? Что содержится в проекте "Кодекс россиянина" Сергея Караганова? Возможна ли Россия вне западного языка и западных понятий? Происходит ли в стране ретрадиция и возврат к традиционным ценностям — или это сплошной миф? Существует ли вообще русская традиция или она безвозвратно утрачена? 
 
-Chapter
-00:00 Intro
-00:39 Cost of intelligence
-01:22 Gold vs Intelligence
-01:44 Intelligence vs Inference
-03:41 AI innovation cycle
-04:26 Analysis: AI innovations
-05:28 Access to Compute
-08:41 Conclusion</description>
-      <guid isPermaLink="false">I4jbVyOqZgA</guid>
-      <enclosure url="https://2vlad.github.io/vlad-podcast/media/I4jbVyOqZgA.m4a" length="6584427" type="audio/mp4"/>
-      <pubDate>Sat, 01 Nov 2025 00:00:00 +0000</pubDate>
-      <itunes:duration>09:01</itunes:duration>
+Завершили разговором про нейросеть как новый источник сакральной легитимности — и взгляды Питера Тиля на "обожение ИИ". А главное — приблизит ли ИИ нас к Антихристу или, наоборот, спасёт от конца света. 
+
+Бонусом: пиратские банды, баня, республиканство и Римская империя, а ещё анекдот от Павла Щелина. 
+
+А на Бусти вас уже ждут наши реакции на интервью с Золкиным и Апостолом и на фильм "Дом динамита". Также — там вышла УЛУЧШЕННАЯ версия подкаста. Почему УЛУЧШЕННАЯ? Мы не скажем, но вы всё поймёте: https://boosty.to/mashkomnata
+
+Павел Щелин
+Tg: https://t.me/common_sen
+YT: https://youtube.com/@PavelShchelin
+http://www.youtube.com/@ЭфирысПавломЩелиным
+
+Этот разговор продолжает цикл бесед с Павлом Щелиным. Если не смотрели предыдущие выпуски — вот они:
+• https://youtu.be/7SKk7sUVYDA
+• https://youtu.be/xwOQS308qr0
+
+Все эпизоды подкаста доступны в аудиоформате
+────────────
+VK Музыка: https://vk.com/podcasts-217610177 
+Яндекс.Музыка: https://music.yandex.ru/album/25943723
+Apple Podcasts: https://podcasts.apple.com/us/podcast/не-выходя-из-комнаты/id1689090236
+ЗВУК: https://zvuk.com/podcast/30961708
+
+Подписывайтесь на наши соцсети
+────────────
+Telegram: https://t.me/mashkomnata
+VK: https://vk.com/mashkomnata
+Дзен: https://dzen.ru/mashkomnata
+YouTube: https://www.youtube.com/@mashkomnata
+
+По вопросам рекламы: mashkomnata@yandex.com
+
+Таймкоды
+────────────
+00:00 — Интро
+00:09 — Гость выпуска — Павел Щелин
+00:22 — Эксперимент: смотрим фильм Кэтрин Бигелоу "Дом динамита"
+00:37 — Где смотреть нашу реакцию на интервью с Золкиным и Апостолом
+01:35 — Почему мир снова одержим апокалипсисом
+07:34 — Если начнётся эскалация, кто станет адресатом удара
+11:37 — Возврат к традициям: что мы ищем в прошлом
+15:20 — "Миф о проигрыше России в холодной войне — западный"
+19:40 — Консерватизм против традиционализма: что ближе России
+23:40 — "Связь Ветхого и Нового Завета — это буквально один человек"
+24:21 — Какие уроки мы не извлекли из собственной истории
+25:45 — Апокалипсис и циклы: как совместить две логики времени
+27:39 — Что такое идеология и откуда она берётся
+30:52 — Можно ли придумать идеологию
+33:23 — Лимит постмодерна
+33:41 — Почему Запад уже не способен спасти сам себя
+37:18 — Американская мечта и идея фронтира: как рождаются идеологии
+44:57 — "Забывание собственного имени — часть русской истории"
+48:46 — "Наша метаистория — это война"
+52:05 — Почему раскол — часть русской идентичности
+01:01:07 — Государство как главный модернистский субъект
+01:01:38 — Караганов, русская идея и кодекс россиянина
+01:06:58 — Республиканизм vs соборность
+01:08:43 — Что такое республика
+01:13:13 — Главная стратегическая задача России
+01:20:47 — Республиканизм уводит нас в чужую традицию?
+01:22:44 — Почему в республиканизме нет места самопожертвованию
+01:24:27 — Что нам делать дальше
+01:26:34 — Что из западного наследия действительно наше
+01:33:48 — "Онтологически мы не Запад, мы — Античность"
+01:35:30 — Питер Тиль, искусственный интеллект и православие
+01:50:23 — Итоги разговора
+
+#Щелин #ПавелЩелин #философия #Россия</description>
+      <guid isPermaLink="false">VP2ghYBpne8</guid>
+      <enclosure url="https://2vlad.github.io/vlad-podcast/media/VP2ghYBpne8.m4a" length="81194715" type="audio/mp4"/>
+      <pubDate>Mon, 03 Nov 2025 00:00:00 +0000</pubDate>
+      <itunes:duration>01:51:10</itunes:duration>
     </item>
   </channel>
 </rss>
