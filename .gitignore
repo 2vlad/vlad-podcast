@@ -64,6 +64,14 @@ podcast/
 *.m4a
 *.mp3
 
+# Allow docs directory for GitHub Pages
+!docs/
+!docs/rss.xml
+!docs/index.md
+# But still ignore media files in docs
+docs/media/*.m4a
+docs/media/*.mp3
+
 # IDEs
 *.swp
 *.swo
