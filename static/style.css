@@ -1,0 +1,378 @@
+/* Apple-style minimalist design - Black & White */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    background: #ffffff;
+    color: #1d1d1f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    width: 100%;
+    max-width: 640px;
+    padding: 48px 24px;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-bottom: 80px;
+}
+
+.icon-logo {
+    width: 64px;
+    height: 64px;
+    stroke: #1d1d1f;
+    opacity: 0.9;
+}
+
+/* Content */
+.content {
+    margin-bottom: 48px;
+}
+
+/* Input Group */
+.input-group {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.input-group.processing {
+    opacity: 0.5;
+    transform: translateY(-8px);
+}
+
+input {
+    flex: 1;
+    height: 56px;
+    padding: 0 20px;
+    border: 1.5px solid #d2d2d7;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: 400;
+    color: #1d1d1f;
+    background: #ffffff;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+
+input::placeholder {
+    color: #86868b;
+}
+
+input:focus {
+    border-color: #1d1d1f;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary {
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: 12px;
+    background: #1d1d1f;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+
+.btn-primary:hover {
+    background: #424245;
+    transform: scale(1.02);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: scale(1);
+}
+
+.icon-arrow {
+    width: 24px;
+    height: 24px;
+}
+
+/* Status Area */
+.status {
+    text-align: center;
+    padding: 40px 24px;
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.status-icon {
+    margin-bottom: 24px;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    animation: rotate 1s linear infinite;
+}
+
+.spinner circle {
+    stroke: #1d1d1f;
+    stroke-linecap: round;
+    animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+.status-text {
+    font-size: 17px;
+    font-weight: 500;
+    color: #1d1d1f;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+}
+
+/* Progress Bar */
+.progress-bar {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    background: #f5f5f7;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 16px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1d1d1f 0%, #424245 100%);
+    border-radius: 4px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+}
+
+.progress-percent {
+    position: absolute;
+    top: -24px;
+    right: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d1d1f;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Result Area */
+.result {
+    padding: 32px;
+    border: 1.5px solid #d2d2d7;
+    border-radius: 16px;
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.result-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 20px;
+}
+
+.result-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke: #1d1d1f;
+}
+
+.result-title {
+    font-size: 19px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+}
+
+.result-meta {
+    font-size: 15px;
+    color: #86868b;
+    margin-bottom: 16px;
+}
+
+.result-file {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1d1d1f;
+    padding: 12px 16px;
+    background: #f5f5f7;
+    border-radius: 8px;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+}
+
+/* Error Area */
+.error {
+    padding: 32px;
+    border: 1.5px solid #1d1d1f;
+    border-radius: 16px;
+    text-align: center;
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.error-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 20px;
+}
+
+.error-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke: #1d1d1f;
+}
+
+.error-text {
+    font-size: 17px;
+    color: #1d1d1f;
+    line-height: 1.5;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    font-size: 13px;
+    color: #86868b;
+    letter-spacing: -0.01em;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .container {
+        padding: 32px 20px;
+    }
+
+    .header {
+        margin-bottom: 60px;
+    }
+
+    .icon-logo {
+        width: 56px;
+        height: 56px;
+    }
+
+    input {
+        font-size: 16px;
+        height: 52px;
+    }
+
+    .btn-primary {
+        width: 52px;
+        height: 52px;
+    }
+
+    .result-title {
+        font-size: 17px;
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #000000;
+        color: #f5f5f7;
+    }
+
+    .icon-logo {
+        stroke: #f5f5f7;
+    }
+
+    input {
+        background: #1d1d1f;
+        color: #f5f5f7;
+        border-color: #424245;
+    }
+
+    input::placeholder {
+        color: #86868b;
+    }
+
+    input:focus {
+        border-color: #f5f5f7;
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-primary {
+        background: #f5f5f7;
+        color: #1d1d1f;
+    }
+
+    .btn-primary:hover {
+        background: #e8e8ed;
+    }
+
+    .spinner circle {
+        stroke: #f5f5f7;
+    }
+
+    .status-text,
+    .result-title,
+    .result-file,
+    .error-text {
+        color: #f5f5f7;
+    }
+
+    .result,
+    .error {
+        border-color: #424245;
+    }
+
+    .result-icon svg,
+    .error-icon svg {
+        stroke: #f5f5f7;
+    }
+
+    .result-file {
+        background: #1d1d1f;
+    }
+}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yt2pod</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Logo/Title Area -->
+        <div class="header">
+            <svg class="icon-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                <circle cx="12" cy="12" r="2"/>
+            </svg>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Input Area -->
+            <div class="input-group" id="inputGroup">
+                <input 
+                    type="text" 
+                    id="urlInput" 
+                    placeholder="youtube.com/watch?v=..." 
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <button id="submitBtn" class="btn-primary">
+                    <svg class="icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Status Area -->
+            <div class="status" id="status" style="display: none;">
+                <div class="status-icon" id="statusIcon">
+                    <!-- Loading spinner -->
+                    <svg class="spinner" viewBox="0 0 50 50">
+                        <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"></circle>
+                    </svg>
+                </div>
+                <div class="status-text" id="statusText"></div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-bar" id="progressBar" style="display: none;">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <div class="progress-percent" id="progressPercent">0%</div>
+                </div>
+            </div>
+
+            <!-- Result Area -->
+            <div class="result" id="result" style="display: none;">
+                <div class="result-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                </div>
+                <div class="result-info">
+                    <div class="result-title" id="resultTitle"></div>
+                    <div class="result-meta" id="resultMeta"></div>
+                    <div class="result-file" id="resultFile"></div>
+                </div>
+            </div>
+
+            <!-- Error Area -->
+            <div class="error" id="error" style="display: none;">
+                <div class="error-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M15 9l-6 6M9 9l6 6"/>
+                    </svg>
+                </div>
+                <div class="error-text" id="errorText"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <span id="podcastInfo"></span>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
