@@ -10,6 +10,9 @@ from pathlib import Path
 import threading
 import logging
 from datetime import datetime
+import hashlib
+import os
+from werkzeug.utils import secure_filename
 
 from config import get_settings, ConfigurationError
 from utils.logger import setup_logger
@@ -21,12 +24,146 @@ from utils.github_publisher import GitHubPublisher
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
+# File upload configuration
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
+ALLOWED_EXTENSIONS = {'mp3', 'mp4', 'm4a'}
+
 logger = setup_logger("web")
 
 # Job status tracking
 jobs = {}
 job_id_counter = 0
 job_lock = threading.Lock()
+
+
+def allowed_file(filename):
+    """Check if file extension is allowed."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def process_upload_job(job_id: int, file_path: Path, original_filename: str, title: str = None, description: str = None):
+    """Background job to process an uploaded audio/video file."""
+    global jobs
+    
+    try:
+        jobs[job_id]['status'] = 'processing'
+        jobs[job_id]['message'] = 'Processing uploaded file...'
+        jobs[job_id]['progress'] = {'status': 'processing', 'percent': 0}
+        
+        settings = get_settings()
+        
+        # Generate unique ID from file content
+        with open(file_path, 'rb') as f:
+            file_hash = hashlib.md5(f.read()).hexdigest()[:11]
+        
+        jobs[job_id]['video_id'] = file_hash
+        
+        # Determine file extension
+        ext = file_path.suffix.lower()
+        target_format = settings.audio_format
+        
+        # Convert to target format if needed
+        if ext == '.mp4':
+            jobs[job_id]['message'] = 'Converting MP4 to audio...'
+            jobs[job_id]['progress'] = {'status': 'converting', 'percent': 50}
+            
+            # Use ffmpeg to convert
+            output_file = settings.media_dir / f"{file_hash}.{target_format}"
+            import subprocess
+            
+            cmd = [
+                'ffmpeg', '-i', str(file_path),
+                '-vn',  # No video
+                '-acodec', 'aac' if target_format == 'm4a' else 'libmp3lame',
+                '-q:a', '2',  # Quality
+                str(output_file)
+            ]
+            
+            try:
+                subprocess.run(cmd, check=True, capture_output=True)
+                file_path.unlink()  # Remove original file
+                audio_file = output_file
+            except subprocess.CalledProcessError as e:
+                logger.error(f"FFmpeg conversion failed: {e.stderr.decode()}")
+                # If conversion fails, just rename the file
+                audio_file = file_path.rename(settings.media_dir / f"{file_hash}{ext}")
+        else:
+            # MP3/M4A files - just rename
+            audio_file = file_path.rename(settings.media_dir / f"{file_hash}{ext}")
+        
+        jobs[job_id]['message'] = 'Extracting metadata...'
+        jobs[job_id]['progress'] = {'status': 'metadata', 'percent': 75}
+        
+        # Get file size
+        file_size = audio_file.stat().st_size
+        
+        # Use provided title or filename
+        if not title:
+            title = Path(original_filename).stem
+        
+        if not description:
+            description = f"Uploaded audio: {original_filename}"
+        
+        jobs[job_id]['title'] = title
+        jobs[job_id]['duration'] = 'Unknown'  # Could extract with ffprobe if needed
+        
+        jobs[job_id]['message'] = 'Updating RSS feed...'
+        jobs[job_id]['progress'] = {'status': 'feed', 'percent': 90}
+        
+        # Update RSS
+        rss_manager = RSSManager(
+            site_url=settings.site_url,
+            media_base_url=settings.media_base_url,
+            title=settings.podcast_title,
+            description=settings.podcast_description,
+            author=settings.podcast_author,
+            language=settings.podcast_language,
+            category=settings.podcast_category,
+        )
+        
+        fg = rss_manager.load_existing_feed(settings.rss_file)
+        if fg is None:
+            fg = rss_manager.create_feed()
+        
+        existing_guids = rss_manager.get_existing_guids(settings.rss_file)
+        
+        if file_hash in existing_guids:
+            jobs[job_id]['status'] = 'completed'
+            jobs[job_id]['message'] = 'Already in feed'
+            jobs[job_id]['duplicate'] = True
+            return
+        
+        # Add episode
+        audio_url = f"{settings.media_base_url}/{audio_file.name}"
+        mime_type = "audio/mp4" if audio_file.suffix == '.m4a' else "audio/mpeg"
+        
+        episode = EpisodeData(
+            guid=file_hash,
+            title=title,
+            link=settings.site_url,  # No external link for uploads
+            description=description,
+            audio_url=audio_url,
+            audio_file_size=file_size,
+            audio_mime_type=mime_type,
+            pub_date=datetime.now(),
+            duration=None,  # Unknown for uploaded files
+            image_url=None,  # No thumbnail for uploads
+        )
+        
+        rss_manager.add_episode(fg, episode)
+        rss_manager.save_feed(fg, settings.rss_file, max_items=settings.feed_max_items)
+        
+        jobs[job_id]['status'] = 'completed'
+        jobs[job_id]['message'] = 'Upload completed successfully!'
+        jobs[job_id]['progress'] = {'status': 'completed', 'percent': 100}
+        
+        logger.info(f"Successfully processed uploaded file: {original_filename} (ID: {file_hash})")
+        
+    except Exception as e:
+        logger.error(f"Failed to process upload: {e}", exc_info=True)
+        jobs[job_id]['status'] = 'error'
+        jobs[job_id]['message'] = f'Error: {str(e)}'
+        jobs[job_id]['progress'] = {'status': 'error', 'percent': 0}
 
 
 def process_video_job(job_id: int, url: str):
@@ -204,6 +341,71 @@ def process_url():
         'job_id': job_id,
         'status': 'pending'
     })
+
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    """Upload and process an audio/video file."""
+    global job_id_counter, jobs
+    
+    # Check if file was uploaded
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+    
+    # Get optional metadata
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    
+    try:
+        settings = get_settings()
+        
+        # Create temp directory if it doesn't exist
+        temp_dir = settings.podcast_dir / 'temp'
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save uploaded file temporarily
+        filename = secure_filename(file.filename)
+        temp_path = temp_dir / filename
+        file.save(str(temp_path))
+        
+        # Create job
+        with job_lock:
+            job_id_counter += 1
+            job_id = job_id_counter
+            
+            jobs[job_id] = {
+                'id': job_id,
+                'filename': filename,
+                'status': 'pending',
+                'message': 'File uploaded, processing...',
+                'created_at': datetime.now().isoformat(),
+            }
+        
+        # Start background processing
+        thread = threading.Thread(
+            target=process_upload_job,
+            args=(job_id, temp_path, filename, title or None, description or None)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'job_id': job_id,
+            'status': 'pending',
+            'filename': filename
+        })
+        
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/status/<int:job_id>')

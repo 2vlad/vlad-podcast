@@ -297,3 +297,171 @@ function showResult(data) {
     urlInput.value = '';
     currentJobId = null;
 }
+
+// ===== TAB SWITCHING =====
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const tabName = button.getAttribute('data-tab');
+        
+        // Update active states
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        button.classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        
+        // Reset UI
+        hideAll();
+        inputGroup.classList.remove('processing');
+        submitBtn.disabled = false;
+    });
+});
+
+// ===== FILE UPLOAD =====
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const uploadMetadata = document.getElementById('uploadMetadata');
+const selectedFile = document.getElementById('selectedFile');
+const titleInput = document.getElementById('titleInput');
+const descriptionInput = document.getElementById('descriptionInput');
+const uploadBtn = document.getElementById('uploadBtn');
+
+let selectedFileObj = null;
+
+// Click to browse
+uploadZone.addEventListener('click', () => {
+    fileInput.click();
+});
+
+// File selected
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        handleFileSelect(file);
+    }
+});
+
+// Drag and drop
+uploadZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadZone.classList.add('drag-over');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+    uploadZone.classList.remove('drag-over');
+});
+
+uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        handleFileSelect(file);
+    }
+});
+
+function handleFileSelect(file) {
+    // Check file type
+    const validTypes = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'video/mp4'];
+    const validExts = ['.mp3', '.mp4', '.m4a'];
+    const hasValidExt = validExts.some(ext => file.name.toLowerCase().endsWith(ext));
+    
+    if (!validTypes.includes(file.type) && !hasValidExt) {
+        showError('Неподдерживаемый формат. Используйте MP3, MP4 или M4A');
+        return;
+    }
+    
+    // Check file size (500MB)
+    if (file.size > 500 * 1024 * 1024) {
+        showError('Файл слишком большой. Максимум 500MB');
+        return;
+    }
+    
+    selectedFileObj = file;
+    selectedFile.textContent = `📎 ${file.name} (${formatFileSize(file.size)})`;
+    
+    // Show metadata form
+    uploadZone.style.display = 'none';
+    uploadMetadata.style.display = 'block';
+    
+    // Auto-fill title from filename
+    const filename = file.name.replace(/\.(mp3|mp4|m4a)$/i, '');
+    titleInput.value = filename;
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Upload button click
+uploadBtn.addEventListener('click', () => {
+    if (!selectedFileObj) return;
+    
+    const title = titleInput.value.trim();
+    const description = descriptionInput.value.trim();
+    
+    // Reset UI
+    hideAll();
+    inputGroup.classList.add('processing');
+    uploadBtn.disabled = true;
+    
+    // Show status
+    status.style.display = 'flex';
+    statusText.textContent = 'Загрузка файла...';
+    
+    // Create FormData
+    const formData = new FormData();
+    formData.append('file', selectedFileObj);
+    if (title) formData.append('title', title);
+    if (description) formData.append('description', description);
+    
+    // Upload
+    fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            showError(data.error);
+            uploadBtn.disabled = false;
+            return;
+        }
+        
+        currentJobId = data.job_id;
+        statusText.textContent = 'Обработка файла...';
+        
+        // Start status polling
+        statusCheckInterval = setInterval(checkStatus, 1000);
+    })
+    .catch(err => {
+        showError('Ошибка загрузки: ' + err.message);
+        uploadBtn.disabled = false;
+    });
+});
+
+// Reset upload form when switching tabs
+function resetUploadForm() {
+    selectedFileObj = null;
+    fileInput.value = '';
+    titleInput.value = '';
+    descriptionInput.value = '';
+    uploadZone.style.display = 'block';
+    uploadMetadata.style.display = 'none';
+    uploadBtn.disabled = false;
+}
+
+// Update tab switching to reset upload form
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        resetUploadForm();
+    });
+});

@@ -18,20 +18,51 @@
 
         <!-- Main Content -->
         <div class="content">
-            <!-- Input Area -->
-            <div class="input-group" id="inputGroup">
-                <input 
-                    type="text" 
-                    id="urlInput" 
-                    placeholder="youtube.com/watch?v=..." 
-                    autocomplete="off"
-                    spellcheck="false"
-                />
-                <button id="submitBtn" class="btn-primary">
-                    <svg class="icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </button>
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-button active" data-tab="url">YouTube URL</button>
+                <button class="tab-button" data-tab="upload">Upload File</button>
+            </div>
+
+            <!-- URL Input Tab -->
+            <div class="tab-content active" id="tab-url">
+                <div class="input-group" id="inputGroup">
+                    <input 
+                        type="text" 
+                        id="urlInput" 
+                        placeholder="youtube.com/watch?v=..." 
+                        autocomplete="off"
+                        spellcheck="false"
+                    />
+                    <button id="submitBtn" class="btn-primary">
+                        <svg class="icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload Tab -->
+            <div class="tab-content" id="tab-upload">
+                <div class="upload-area">
+                    <div class="upload-zone" id="uploadZone">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <p class="upload-text">Drop file here or click to browse</p>
+                        <p class="upload-hint">MP3, MP4, M4A (max 500MB)</p>
+                        <input type="file" id="fileInput" accept=".mp3,.mp4,.m4a" hidden />
+                    </div>
+                    
+                    <div class="upload-metadata" id="uploadMetadata" style="display: none;">
+                        <p class="selected-file" id="selectedFile"></p>
+                        <input type="text" id="titleInput" placeholder="Episode Title (optional)" class="metadata-input" />
+                        <textarea id="descriptionInput" placeholder="Description (optional)" class="metadata-input" rows="3"></textarea>
+                        <button id="uploadBtn" class="btn-primary">Upload and Add</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Status Area -->
