@@ -1,21 +1,39 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<rss xmlns:ns0="http://www.w3.org/2005/Atom" xmlns:ns1="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">
   <channel>
     <title>Влад Слушает</title>
     <link>https://2vlad.github.io/vlad-podcast/rss.xml</link>
     <description>Запаиси для прогулок</description>
-    <ns0:link href="https://2vlad.github.io/vlad-podcast/rss.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://2vlad.github.io/vlad-podcast/rss.xml" rel="self" type="application/rss+xml"/>
     <docs>http://www.rssboard.org/rss-specification</docs>
     <generator>YouTube to Podcast v0.1.0</generator>
     <language>ru</language>
-    <lastBuildDate>Mon, 03 Nov 2025 18:52:48 +0000</lastBuildDate>
-    <ns1:author>Влад</ns1:author>
-    <ns1:category text="Leisure" />
-    <ns1:explicit>no</ns1:explicit>
-    <ns1:owner>
-      <ns1:name>Влад</ns1:name>
-      <ns1:email>podcast@example.com</ns1:email>
-    </ns1:owner>
+    <lastBuildDate>Tue, 04 Nov 2025 19:16:28 +0000</lastBuildDate>
+    <itunes:author>Влад</itunes:author>
+    <itunes:category text="Leisure"/>
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:owner>
+      <itunes:name>Влад</itunes:name>
+      <itunes:email>podcast@example.com</itunes:email>
+    </itunes:owner>
+    <item>
+      <title>VP2ghYBpne8</title>
+      <link>https://youtube.com/watch?v=VP2ghYBpne8</link>
+      <description>VP2ghYBpne8</description>
+      <guid isPermaLink="false">VP2ghYBpne8</guid>
+      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/VP2ghYBpne8.mp3" length="109784734" type="audio/mpeg"/>
+      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
+      <itunes:duration>00:00</itunes:duration>
+    </item>
+    <item>
+      <title>dQw4w9WgXcQ</title>
+      <link>https://youtube.com/watch?v=dQw4w9WgXcQ</link>
+      <description>dQw4w9WgXcQ</description>
+      <guid isPermaLink="false">dQw4w9WgXcQ</guid>
+      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/dQw4w9WgXcQ.mp3" length="5062505" type="audio/mpeg"/>
+      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
+      <itunes:duration>00:00</itunes:duration>
+    </item>
     <item>
       <title>Чистота понимания: В поисках утраченного времени. Павел Щелин, Алексей Чадаев, Семён Уралов</title>
       <link>https://www.youtube.com/watch?v=JA0ekBbCt_A</link>
@@ -119,10 +137,37 @@ https://rutube.ru/plst/720201
 #Чистота_понимания | #чистотапонимания | #ЧП | #ВПФ
 #щелин #павелщелин #трамп #зеленский #ультиматум #сша #маск #тцк #мобилизация #переговоры #конецвойны #прекращениеогня #перемирие #всу #путин #политика  #щелинпавел #щелинпавелпоследнее #павелщелинпоследнее</description>
       <guid isPermaLink="false">JA0ekBbCt_A</guid>
-      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/JA0ekBbCt_A.m4a" length="88952901" type="audio/mp4" />
+      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/JA0ekBbCt_A.mp3" length="109992183" type="audio/mpeg"/>
       <pubDate>Thu, 30 Oct 2025 00:00:00 +0000</pubDate>
-      <ns1:image href="https://i.ytimg.com/vi/JA0ekBbCt_A/maxresdefault.jpg" />
-      <ns1:duration>02:01:48</ns1:duration>
+      <itunes:image href="https://i.ytimg.com/vi/JA0ekBbCt_A/maxresdefault.jpg"/>
+      <itunes:duration>02:01:48</itunes:duration>
+    </item>
+    <item>
+      <title>X-ot9682-1w</title>
+      <link>https://youtube.com/watch?v=X-ot9682-1w</link>
+      <description>X-ot9682-1w</description>
+      <guid isPermaLink="false">X-ot9682-1w</guid>
+      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/X-ot9682-1w.mp3" length="12523543" type="audio/mpeg"/>
+      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
+      <itunes:duration>00:00</itunes:duration>
+    </item>
+    <item>
+      <title>I4jbVyOqZgA</title>
+      <link>https://youtube.com/watch?v=I4jbVyOqZgA</link>
+      <description>I4jbVyOqZgA</description>
+      <guid isPermaLink="false">I4jbVyOqZgA</guid>
+      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/I4jbVyOqZgA.mp3" length="8854301" type="audio/mpeg"/>
+      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
+      <itunes:duration>00:00</itunes:duration>
+    </item>
+    <item>
+      <title>jNQXAC9IVRw</title>
+      <link>https://youtube.com/watch?v=jNQXAC9IVRw</link>
+      <description>jNQXAC9IVRw</description>
+      <guid isPermaLink="false">jNQXAC9IVRw</guid>
+      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/jNQXAC9IVRw.mp3" length="156733" type="audio/mpeg"/>
+      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
+      <itunes:duration>00:00</itunes:duration>
     </item>
   </channel>
 </rss>
