@@ -9,7 +9,7 @@ from flask_cors import CORS
 from pathlib import Path
 import threading
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import os
 from werkzeug.utils import secure_filename
@@ -145,7 +145,7 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
             audio_url=audio_url,
             audio_file_size=file_size,
             audio_mime_type=mime_type,
-            pub_date=datetime.now(),
+            pub_date=datetime.now(timezone.utc),
             duration=None,  # Unknown for uploaded files
             image_url=None,  # No thumbnail for uploads
         )
