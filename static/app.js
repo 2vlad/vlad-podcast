@@ -465,3 +465,174 @@ tabButtons.forEach(button => {
         resetUploadForm();
     });
 });
+
+// ===== AUDIO PLAYER =====
+const audioPlayer = document.getElementById('audioPlayer');
+const audioElement = document.getElementById('audioElement');
+const audioPlayerTitle = document.getElementById('audioPlayerTitle');
+const audioPlayerMeta = document.getElementById('audioPlayerMeta');
+const audioPlayerPlayPause = document.getElementById('audioPlayerPlayPause');
+const audioPlayerProgress = document.getElementById('audioPlayerProgress');
+const audioPlayerClose = document.getElementById('audioPlayerClose');
+const audioPlayerVolume = document.getElementById('audioPlayerVolume');
+
+let currentEpisode = null;
+
+// Close player
+audioPlayerClose.addEventListener('click', () => {
+    audioElement.pause();
+    audioPlayer.style.display = 'none';
+    currentEpisode = null;
+});
+
+// Play/Pause toggle
+audioPlayerPlayPause.addEventListener('click', () => {
+    if (audioElement.paused) {
+        audioElement.play();
+    } else {
+        audioElement.pause();
+    }
+});
+
+// Update UI when playing/paused
+audioElement.addEventListener('play', () => {
+    audioPlayerPlayPause.querySelector('.play-icon').style.display = 'none';
+    audioPlayerPlayPause.querySelector('.pause-icon').style.display = 'block';
+});
+
+audioElement.addEventListener('pause', () => {
+    audioPlayerPlayPause.querySelector('.play-icon').style.display = 'block';
+    audioPlayerPlayPause.querySelector('.pause-icon').style.display = 'none';
+});
+
+// Update progress and time
+audioElement.addEventListener('timeupdate', () => {
+    if (audioElement.duration) {
+        const progress = (audioElement.currentTime / audioElement.duration) * 100;
+        audioPlayerProgress.value = progress;
+        
+        const current = formatTime(audioElement.currentTime);
+        const total = formatTime(audioElement.duration);
+        audioPlayerMeta.textContent = `${current} / ${total}`;
+    }
+});
+
+// Seek when clicking on progress bar
+audioPlayerProgress.addEventListener('input', (e) => {
+    const seekTime = (e.target.value / 100) * audioElement.duration;
+    audioElement.currentTime = seekTime;
+});
+
+// Volume toggle
+audioPlayerVolume.addEventListener('click', () => {
+    if (audioElement.volume > 0) {
+        audioElement.volume = 0;
+        audioPlayerVolume.style.opacity = '0.3';
+    } else {
+        audioElement.volume = 1;
+        audioPlayerVolume.style.opacity = '0.6';
+    }
+});
+
+// Format time (seconds to MM:SS)
+function formatTime(seconds) {
+    if (!seconds || isNaN(seconds)) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Play episode function (called when clicking episode icon)
+function playEpisode(episode) {
+    currentEpisode = episode;
+    
+    // Show player
+    audioPlayer.style.display = 'block';
+    
+    // Set audio source
+    audioElement.src = episode.audio_url;
+    
+    // Update info
+    audioPlayerTitle.textContent = episode.title;
+    audioPlayerMeta.textContent = '00:00 / 00:00';
+    
+    // Reset progress
+    audioPlayerProgress.value = 0;
+    
+    // Play
+    audioElement.play().catch(err => {
+        console.error('Failed to play audio:', err);
+        alert('Не удалось воспроизвести аудио');
+    });
+}
+
+// Modified createEpisodeItem to add play functionality
+const originalCreateEpisodeItem = createEpisodeItem;
+
+createEpisodeItem = function(episode) {
+    const item = document.createElement('div');
+    item.className = 'episode-item';
+    
+    // Format date
+    const date = formatDate(episode.pub_date);
+    
+    item.innerHTML = `
+        <div class="episode-header">
+            <div class="episode-icon" data-audio-url="${episode.audio_url}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+            </div>
+            <div class="episode-info">
+                <div class="episode-title">${escapeHtml(episode.title)}</div>
+                <div class="episode-meta">
+                    ${episode.duration ? `<span class="episode-duration">${episode.duration}</span>` : ''}
+                    ${date ? `<span class="episode-date">${date}</span>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add click handler to play button
+    const playIcon = item.querySelector('.episode-icon');
+    playIcon.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        playEpisode(episode);
+    });
+    
+    // Add click handler to title (opens external link)
+    const titleEl = item.querySelector('.episode-title');
+    if (episode.link) {
+        titleEl.style.cursor = 'pointer';
+        titleEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.open(episode.link, '_blank', 'noopener,noreferrer');
+        });
+    }
+    
+    return item;
+};
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (!audioPlayer.style.display || audioPlayer.style.display === 'none') return;
+    
+    // Space - play/pause
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        audioPlayerPlayPause.click();
+    }
+    
+    // Arrow Left - rewind 10s
+    if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        audioElement.currentTime = Math.max(0, audioElement.currentTime - 10);
+    }
+    
+    // Arrow Right - forward 10s
+    if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        audioElement.currentTime = Math.min(audioElement.duration, audioElement.currentTime + 10);
+    }
+});

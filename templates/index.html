@@ -130,6 +130,46 @@
         </div>
     </div>
 
+    <!-- Audio Player (Fixed at bottom) -->
+    <div class="audio-player" id="audioPlayer" style="display: none;">
+        <div class="audio-player-content">
+            <button class="audio-player-close" id="audioPlayerClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+            
+            <div class="audio-player-info">
+                <div class="audio-player-title" id="audioPlayerTitle">Episode Title</div>
+                <div class="audio-player-meta" id="audioPlayerMeta">00:00 / 00:00</div>
+            </div>
+            
+            <div class="audio-player-controls">
+                <button class="audio-player-btn" id="audioPlayerPlayPause">
+                    <svg class="play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    <svg class="pause-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                        <rect x="6" y="4" width="4" height="16"/>
+                        <rect x="14" y="4" width="4" height="16"/>
+                    </svg>
+                </button>
+                
+                <input type="range" class="audio-player-progress" id="audioPlayerProgress" min="0" max="100" value="0" step="0.1"/>
+                
+                <button class="audio-player-volume" id="audioPlayerVolume">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <audio id="audioElement" preload="metadata"></audio>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
 </body>
 </html>
