@@ -142,7 +142,7 @@ class RSSManager:
     
     def load_existing_feed(self, rss_file: Path) -> Optional[FeedGenerator]:
         """
-        Load existing RSS feed from file.
+        Load existing RSS feed from file, including all existing episodes.
         
         Args:
             rss_file: Path to existing RSS file
@@ -181,6 +181,60 @@ class RSSManager:
                     fg.link(href=link.text, rel='alternate')
                 else:
                     fg.link(href=self.site_url, rel='alternate')
+                
+                # ✅ ВАЖНО: Загружаем существующие эпизоды
+                for item in channel.findall('item'):
+                    try:
+                        fe = fg.add_entry()
+                        
+                        # Required fields
+                        title_elem = item.find('title')
+                        if title_elem is not None and title_elem.text:
+                            fe.title(title_elem.text)
+                        
+                        link_elem = item.find('link')
+                        if link_elem is not None and link_elem.text:
+                            fe.link(href=link_elem.text)
+                        
+                        desc_elem = item.find('description')
+                        if desc_elem is not None and desc_elem.text:
+                            fe.description(desc_elem.text)
+                        
+                        guid_elem = item.find('guid')
+                        if guid_elem is not None and guid_elem.text:
+                            is_permalink = guid_elem.get('isPermaLink', 'true').lower() == 'true'
+                            fe.guid(guid_elem.text, permalink=is_permalink)
+                        
+                        # Enclosure (audio file)
+                        enclosure = item.find('enclosure')
+                        if enclosure is not None:
+                            url = enclosure.get('url')
+                            length = enclosure.get('length', '0')
+                            mime = enclosure.get('type', 'audio/mp4')
+                            if url:
+                                fe.enclosure(url, length, mime)
+                        
+                        # Pub date
+                        pub_date_elem = item.find('pubDate')
+                        if pub_date_elem is not None and pub_date_elem.text:
+                            fe.pubDate(pub_date_elem.text)
+                        
+                        # iTunes tags
+                        itunes_ns = '{http://www.itunes.com/dtds/podcast-1.0.dtd}'
+                        
+                        duration_elem = item.find(f'{itunes_ns}duration')
+                        if duration_elem is not None and duration_elem.text:
+                            fe.podcast.itunes_duration(duration_elem.text)
+                        
+                        image_elem = item.find(f'{itunes_ns}image')
+                        if image_elem is not None:
+                            href = image_elem.get('href')
+                            if href:
+                                fe.podcast.itunes_image(href)
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to load episode from feed: {e}")
+                        continue
             
             # Add self link
             rss_url = f"{self.site_url}/rss.xml"
@@ -189,6 +243,8 @@ class RSSManager:
             # iTunes tags
             fg.podcast.itunes_author(self.author)
             fg.podcast.itunes_category(self.category)
+            
+            logger.info(f"Loaded existing feed with {len(fg.entry())} episodes")
             
             return fg
             
