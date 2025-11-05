@@ -512,6 +512,37 @@ def serve_rss():
         return jsonify({'error': 'RSS feed not found'}), 404
 
 
+@app.route('/api/sync-rss', methods=['POST'])
+def sync_rss():
+    """Sync RSS feed from GitHub Pages (docs/rss.xml) to local (podcast/rss.xml)."""
+    try:
+        settings = get_settings()
+        
+        # Path to GitHub Pages RSS
+        docs_rss = settings.base_dir / 'docs' / 'rss.xml'
+        podcast_rss = settings.rss_file
+        
+        if not docs_rss.exists():
+            return jsonify({'error': 'docs/rss.xml not found'}), 404
+        
+        # Copy docs/rss.xml to podcast/rss.xml
+        import shutil
+        shutil.copy2(docs_rss, podcast_rss)
+        
+        logger.info(f"Synced RSS from {docs_rss} to {podcast_rss}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'RSS feed synced from GitHub Pages',
+            'source': str(docs_rss),
+            'destination': str(podcast_rss)
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to sync RSS: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     # Check configuration
     try:
