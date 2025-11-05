@@ -519,10 +519,16 @@ if __name__ == '__main__':
         settings.ensure_directories()
         logger.info("Configuration loaded successfully")
         logger.info(f"Starting web server for: {settings.podcast_title}")
-        logger.info("Open http://localhost:5000 in your browser")
+        
+        # Get port from environment (Railway, Render, etc.) or default to 5001
+        port = int(os.environ.get('PORT', 5001))
+        logger.info(f"Starting server on port {port}")
+        
+        # Debug mode only for local development
+        debug = os.environ.get('ENVIRONMENT', 'development') == 'development'
+        
+        app.run(debug=debug, host='0.0.0.0', port=port)
     except ConfigurationError as e:
         logger.error(f"Configuration error: {e}")
         logger.error("Please configure .env file before starting")
         exit(1)
-    
-    app.run(debug=True, host='0.0.0.0', port=5001)
