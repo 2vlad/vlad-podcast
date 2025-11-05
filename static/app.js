@@ -206,18 +206,15 @@ function displayEpisodes(episodes) {
 }
 
 function createEpisodeItem(episode) {
-    const item = document.createElement('a');
+    const item = document.createElement('div');
     item.className = 'episode-item';
-    item.href = episode.link || '#';
-    item.target = '_blank';
-    item.rel = 'noopener noreferrer';
     
     // Format date
     const date = formatDate(episode.pub_date);
     
     item.innerHTML = `
         <div class="episode-header">
-            <div class="episode-icon">
+            <div class="episode-icon" data-audio-url="${episode.audio_url || ''}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
@@ -231,6 +228,30 @@ function createEpisodeItem(episode) {
             </div>
         </div>
     `;
+    
+    // Add click handler to play button
+    const playIcon = item.querySelector('.episode-icon');
+    playIcon.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!episode.audio_url) {
+            alert('Аудио файл не найден');
+            return;
+        }
+        
+        playEpisode(episode);
+    });
+    
+    // Add click handler to title (opens external link)
+    const titleEl = item.querySelector('.episode-title');
+    if (episode.link) {
+        titleEl.style.cursor = 'pointer';
+        titleEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.open(episode.link, '_blank', 'noopener,noreferrer');
+        });
+    }
     
     return item;
 }
@@ -297,28 +318,6 @@ function showResult(data) {
     urlInput.value = '';
     currentJobId = null;
 }
-
-// ===== TAB SWITCHING =====
-const tabButtons = document.querySelectorAll('.tab-button');
-const tabContents = document.querySelectorAll('.tab-content');
-
-tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const tabName = button.getAttribute('data-tab');
-        
-        // Update active states
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabContents.forEach(content => content.classList.remove('active'));
-        
-        button.classList.add('active');
-        document.getElementById(`tab-${tabName}`).classList.add('active');
-        
-        // Reset UI
-        hideAll();
-        inputGroup.classList.remove('processing');
-        submitBtn.disabled = false;
-    });
-});
 
 // ===== FILE UPLOAD =====
 const uploadZone = document.getElementById('uploadZone');
@@ -565,54 +564,6 @@ function playEpisode(episode) {
         alert('Не удалось воспроизвести аудио');
     });
 }
-
-// Modified createEpisodeItem to add play functionality
-const originalCreateEpisodeItem = createEpisodeItem;
-
-createEpisodeItem = function(episode) {
-    const item = document.createElement('div');
-    item.className = 'episode-item';
-    
-    // Format date
-    const date = formatDate(episode.pub_date);
-    
-    item.innerHTML = `
-        <div class="episode-header">
-            <div class="episode-icon" data-audio-url="${episode.audio_url}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-            </div>
-            <div class="episode-info">
-                <div class="episode-title">${escapeHtml(episode.title)}</div>
-                <div class="episode-meta">
-                    ${episode.duration ? `<span class="episode-duration">${episode.duration}</span>` : ''}
-                    ${date ? `<span class="episode-date">${date}</span>` : ''}
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add click handler to play button
-    const playIcon = item.querySelector('.episode-icon');
-    playIcon.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        playEpisode(episode);
-    });
-    
-    // Add click handler to title (opens external link)
-    const titleEl = item.querySelector('.episode-title');
-    if (episode.link) {
-        titleEl.style.cursor = 'pointer';
-        titleEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            window.open(episode.link, '_blank', 'noopener,noreferrer');
-        });
-    }
-    
-    return item;
-};
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {

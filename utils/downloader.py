@@ -1,12 +1,22 @@
 """
 YouTube audio download and metadata extraction using yt-dlp.
+Automatically converts all audio to MP3 for maximum compatibility.
 """
 
 import yt_dlp
+import logging
 from pathlib import Path
 from typing import Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime
+
+# Import audio converter for MP3 conversion
+try:
+    from utils.audio_converter import convert_to_mp3, AudioConverterError
+except ImportError:
+    from audio_converter import convert_to_mp3, AudioConverterError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -168,17 +178,20 @@ class AudioDownloader:
     
     def download_audio(self, url: str, video_id: str) -> Path:
         """
-        Download audio from YouTube video.
+        Download audio from YouTube video and convert to MP3.
+        
+        Always converts to MP3 for maximum compatibility with podcast players,
+        especially Light Phone and other minimal devices.
         
         Args:
             url: YouTube video URL
             video_id: YouTube video ID
             
         Returns:
-            Path to downloaded audio file
+            Path to downloaded MP3 audio file
             
         Raises:
-            Exception: If download fails
+            Exception: If download or conversion fails
         """
         options = self.get_yt_dlp_options(video_id)
         
@@ -193,7 +206,21 @@ class AudioDownloader:
                 f"Audio file not found after download: {audio_file}"
             )
         
-        return audio_file
+        # Convert to MP3 for maximum compatibility
+        try:
+            logger.info(f"Converting {audio_file.name} to MP3 for compatibility...")
+            mp3_file = convert_to_mp3(
+                audio_file,
+                quality=2,  # ~190kbps VBR - excellent quality
+                keep_original=False  # Remove original file after conversion
+            )
+            logger.info(f"✅ Conversion complete: {mp3_file.name}")
+            return mp3_file
+        except AudioConverterError as e:
+            logger.error(f"Failed to convert to MP3: {e}")
+            # If conversion fails, return original file
+            logger.warning("⚠️  Using original file format (may not work with all players)")
+            return audio_file
     
     def download_with_metadata(self, url: str, video_id: str) -> tuple[Path, VideoMetadata]:
         """

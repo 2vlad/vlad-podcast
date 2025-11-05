@@ -79,9 +79,24 @@ docs/media/*.mp3
 .project
 .pydevproject
 .settings/
+.cursor/
+.roo/
+.kilo/
+.kiro/
+.windsurf/
+.zed/
+.clinerules/
+.gemini/
+.trae/
+.taskmaster/
+.mcp.json
+.rules
+opencode.json
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
-.tox/ 
+.tox/
+test_*.py
+*_test.py 

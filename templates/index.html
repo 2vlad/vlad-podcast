@@ -18,14 +18,8 @@
 
         <!-- Main Content -->
         <div class="content">
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab-button active" data-tab="url">YouTube URL</button>
-                <button class="tab-button" data-tab="upload">Upload File</button>
-            </div>
-
-            <!-- URL Input Tab -->
-            <div class="tab-content active" id="tab-url">
+            <!-- URL Input Section -->
+            <div class="input-section">
                 <div class="input-group" id="inputGroup">
                     <input 
                         type="text" 
@@ -42,8 +36,13 @@
                 </div>
             </div>
 
-            <!-- Upload Tab -->
-            <div class="tab-content" id="tab-upload">
+            <!-- Divider -->
+            <div class="divider">
+                <span class="divider-text">or</span>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
                 <div class="upload-area">
                     <div class="upload-zone" id="uploadZone">
                         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -60,7 +59,7 @@
                         <p class="selected-file" id="selectedFile"></p>
                         <input type="text" id="titleInput" placeholder="Episode Title (optional)" class="metadata-input" />
                         <textarea id="descriptionInput" placeholder="Description (optional)" class="metadata-input" rows="3"></textarea>
-                        <button id="uploadBtn" class="btn-primary">Upload and Add</button>
+                        <button id="uploadBtn" class="btn-primary-full">Upload and Add</button>
                     </div>
                 </div>
             </div>

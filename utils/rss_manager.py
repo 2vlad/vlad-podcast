@@ -14,6 +14,29 @@ import logging
 logger = logging.getLogger("rss_manager")
 
 
+def get_mime_type_from_filename(filename: str) -> str:
+    """
+    Determine MIME type from file extension.
+    
+    Args:
+        filename: File name or path
+        
+    Returns:
+        MIME type string (e.g., 'audio/mpeg' for MP3, 'audio/mp4' for M4A)
+    """
+    ext = Path(filename).suffix.lower()
+    mime_types = {
+        '.mp3': 'audio/mpeg',
+        '.m4a': 'audio/mp4',
+        '.mp4': 'audio/mp4',
+        '.aac': 'audio/aac',
+        '.ogg': 'audio/ogg',
+        '.wav': 'audio/wav',
+        '.flac': 'audio/flac',
+    }
+    return mime_types.get(ext, 'audio/mpeg')  # Default to audio/mpeg (MP3)
+
+
 @dataclass
 class EpisodeData:
     """Data for a podcast episode."""
