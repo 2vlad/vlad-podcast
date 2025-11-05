@@ -152,6 +152,9 @@ class Settings:
         """Create necessary directories if they don't exist."""
         self.podcast_dir.mkdir(exist_ok=True)
         self.media_dir.mkdir(exist_ok=True)
+        # Create temp directory for file uploads
+        temp_dir = self.podcast_dir / 'temp'
+        temp_dir.mkdir(exist_ok=True)
     
     @property
     def yt_dlp_options(self) -> dict:
