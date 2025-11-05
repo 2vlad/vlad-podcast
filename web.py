@@ -18,7 +18,7 @@ from config import get_settings, ConfigurationError
 from utils.logger import setup_logger
 from utils.url_processor import process_urls
 from utils.downloader import AudioDownloader
-from utils.rss_manager import RSSManager, EpisodeData
+from utils.rss_manager import RSSManager, EpisodeData, get_mime_type_from_filename
 from utils.github_publisher import GitHubPublisher
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -135,7 +135,7 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
         
         # Add episode
         audio_url = f"{settings.media_base_url}/{audio_file.name}"
-        mime_type = "audio/mp4" if audio_file.suffix == '.m4a' else "audio/mpeg"
+        mime_type = get_mime_type_from_filename(audio_file.name)
         
         episode = EpisodeData(
             guid=file_hash,
@@ -242,7 +242,7 @@ def process_video_job(job_id: int, url: str):
         # Add episode
         audio_url = f"{settings.media_base_url}/{audio_file.name}"
         file_size = audio_file.stat().st_size
-        mime_type = "audio/mp4" if settings.audio_format == "m4a" else "audio/mpeg"
+        mime_type = get_mime_type_from_filename(audio_file.name)
         
         episode = EpisodeData(
             guid=metadata.video_id,
@@ -252,7 +252,7 @@ def process_video_job(job_id: int, url: str):
             audio_url=audio_url,
             audio_file_size=file_size,
             audio_mime_type=mime_type,
-            pub_date=metadata.pub_date,
+            pub_date=datetime.now(timezone.utc),  # Use current time instead of YouTube upload date
             duration=metadata.formatted_duration,
             image_url=metadata.thumbnail_url,
         )
