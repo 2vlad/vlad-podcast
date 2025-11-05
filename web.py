@@ -51,6 +51,8 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
         jobs[job_id]['progress'] = {'status': 'processing', 'percent': 0}
         
         settings = get_settings()
+        # Ensure directories exist before processing
+        settings.ensure_directories()
         
         # Generate unique ID from file content
         with open(file_path, 'rb') as f:
@@ -188,6 +190,8 @@ def process_video_job(job_id: int, url: str):
         
         # Load settings
         settings = get_settings()
+        # Ensure directories exist before processing
+        settings.ensure_directories()
         
         # Parse URL
         parsed_urls = process_urls([url])
