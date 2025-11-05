@@ -8,7 +8,7 @@
     <docs>http://www.rssboard.org/rss-specification</docs>
     <generator>YouTube to Podcast v0.1.0</generator>
     <language>ru</language>
-    <lastBuildDate>Tue, 04 Nov 2025 19:16:28 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 05 Nov 2025 07:46:20 +0000</lastBuildDate>
     <itunes:author>Влад</itunes:author>
     <itunes:category text="Leisure"/>
     <itunes:explicit>no</itunes:explicit>
@@ -16,24 +16,6 @@
       <itunes:name>Влад</itunes:name>
       <itunes:email>podcast@example.com</itunes:email>
     </itunes:owner>
-    <item>
-      <title>VP2ghYBpne8</title>
-      <link>https://youtube.com/watch?v=VP2ghYBpne8</link>
-      <description>VP2ghYBpne8</description>
-      <guid isPermaLink="false">VP2ghYBpne8</guid>
-      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/VP2ghYBpne8.mp3" length="109784734" type="audio/mpeg"/>
-      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
-      <itunes:duration>00:00</itunes:duration>
-    </item>
-    <item>
-      <title>dQw4w9WgXcQ</title>
-      <link>https://youtube.com/watch?v=dQw4w9WgXcQ</link>
-      <description>dQw4w9WgXcQ</description>
-      <guid isPermaLink="false">dQw4w9WgXcQ</guid>
-      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/dQw4w9WgXcQ.mp3" length="5062505" type="audio/mpeg"/>
-      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
-      <itunes:duration>00:00</itunes:duration>
-    </item>
     <item>
       <title>Чистота понимания: В поисках утраченного времени. Павел Щелин, Алексей Чадаев, Семён Уралов</title>
       <link>https://www.youtube.com/watch?v=JA0ekBbCt_A</link>
@@ -141,33 +123,6 @@ https://rutube.ru/plst/720201
       <pubDate>Thu, 30 Oct 2025 00:00:00 +0000</pubDate>
       <itunes:image href="https://i.ytimg.com/vi/JA0ekBbCt_A/maxresdefault.jpg"/>
       <itunes:duration>02:01:48</itunes:duration>
-    </item>
-    <item>
-      <title>X-ot9682-1w</title>
-      <link>https://youtube.com/watch?v=X-ot9682-1w</link>
-      <description>X-ot9682-1w</description>
-      <guid isPermaLink="false">X-ot9682-1w</guid>
-      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/X-ot9682-1w.mp3" length="12523543" type="audio/mpeg"/>
-      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
-      <itunes:duration>00:00</itunes:duration>
-    </item>
-    <item>
-      <title>I4jbVyOqZgA</title>
-      <link>https://youtube.com/watch?v=I4jbVyOqZgA</link>
-      <description>I4jbVyOqZgA</description>
-      <guid isPermaLink="false">I4jbVyOqZgA</guid>
-      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/I4jbVyOqZgA.mp3" length="8854301" type="audio/mpeg"/>
-      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
-      <itunes:duration>00:00</itunes:duration>
-    </item>
-    <item>
-      <title>jNQXAC9IVRw</title>
-      <link>https://youtube.com/watch?v=jNQXAC9IVRw</link>
-      <description>jNQXAC9IVRw</description>
-      <guid isPermaLink="false">jNQXAC9IVRw</guid>
-      <enclosure url="https://github.com/2vlad/vlad-podcast/releases/download/media-files/jNQXAC9IVRw.mp3" length="156733" type="audio/mpeg"/>
-      <pubDate>Tue, 04 Nov 2025 18:59:49 +0000</pubDate>
-      <itunes:duration>00:00</itunes:duration>
     </item>
   </channel>
 </rss>
