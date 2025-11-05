@@ -439,7 +439,7 @@ uploadBtn.addEventListener('click', () => {
         statusText.textContent = 'Обработка файла...';
         
         // Start status polling
-        statusCheckInterval = setInterval(checkStatus, 1000);
+        startStatusCheck();
     })
     .catch(err => {
         showError('Ошибка загрузки: ' + err.message);
