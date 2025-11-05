@@ -199,9 +199,9 @@ input:focus {
 .btn-primary-full {
     width: 100%;
     height: 56px;
-    border: none;
+    border: 2px solid var(--accent);
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+    background: var(--accent);
     color: #ffffff;
     cursor: pointer;
     display: flex;
