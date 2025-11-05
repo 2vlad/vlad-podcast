@@ -253,52 +253,60 @@ input:focus {
 /* Status Area */
 .status {
     text-align: center;
-    padding: 40px 24px;
+    padding: 60px 24px;
     animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .status-icon {
-    margin-bottom: 24px;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .spinner {
-    width: 48px;
-    height: 48px;
-    animation: rotate 1s linear infinite;
+    width: 64px;
+    height: 64px;
+    animation: rotate 0.8s linear infinite;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
 }
 
 .spinner circle {
     stroke: #1d1d1f;
+    stroke-width: 4;
     stroke-linecap: round;
     animation: dash 1.5s ease-in-out infinite;
+    opacity: 0.8;
 }
 
 @keyframes rotate {
+    0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
 @keyframes dash {
     0% {
-        stroke-dasharray: 1, 150;
+        stroke-dasharray: 1, 200;
         stroke-dashoffset: 0;
     }
     50% {
-        stroke-dasharray: 90, 150;
-        stroke-dashoffset: -35;
+        stroke-dasharray: 100, 200;
+        stroke-dashoffset: -50;
     }
     100% {
-        stroke-dasharray: 90, 150;
-        stroke-dashoffset: -124;
+        stroke-dasharray: 100, 200;
+        stroke-dashoffset: -150;
     }
 }
 
 .status-text {
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 600;
     color: var(--text-primary);
-    letter-spacing: -0.01em;
-    margin-bottom: 20px;
-    animation: fadeIn var(--transition-base);
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    animation: fadeIn var(--transition-base), pulse 2s ease-in-out infinite;
+    line-height: 1.4;
 }
 
 /* Progress Bar */
@@ -656,6 +664,15 @@ input:focus {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
     }
 }
 
