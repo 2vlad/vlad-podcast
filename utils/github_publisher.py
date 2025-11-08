@@ -31,14 +31,25 @@ class GitHubPublisher:
         """Initialize authentication from environment."""
         import os
         tk = os.getenv(''.join(['GITHUB', '_', 'TOKEN']))
-        if tk:
-            try:
-                creds = Path.home() / '.git-credentials'
-                url = f"https://x-access-token:{tk}@github.com\n"
-                if not creds.exists() or url not in creds.read_text():
-                    creds.write_text(url) if not creds.exists() else creds.open('a').write(url)
-                subprocess.run(['gh', 'auth', 'login', '--with-token'], input=tk.encode(), capture_output=True, timeout=10)
-            except: pass
+        if not tk:
+            logger.warning("GITHUB_TOKEN not found in environment")
+            return
+        try:
+            logger.info("Configuring git credentials...")
+            creds = Path.home() / '.git-credentials'
+            url = f"https://x-access-token:{tk}@github.com\n"
+            if not creds.exists() or url not in creds.read_text():
+                creds.write_text(url) if not creds.exists() else creds.open('a').write(url)
+            logger.info("Git credentials configured")
+            
+            logger.info("Configuring gh CLI...")
+            result = subprocess.run(['gh', 'auth', 'login', '--with-token'], input=tk.encode(), capture_output=True, timeout=10)
+            if result.returncode == 0:
+                logger.info("gh CLI authenticated")
+            else:
+                logger.error(f"gh auth failed: {result.stderr.decode()}")
+        except Exception as e:
+            logger.error(f"Auth setup failed: {e}")
     
     def _run_git_command(self, command: list[str]) -> tuple[bool, str]:
         """
