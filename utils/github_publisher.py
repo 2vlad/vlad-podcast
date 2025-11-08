@@ -63,6 +63,7 @@ class GitHubPublisher:
             Tuple of (success: bool, output: str)
         """
         try:
+            logger.info(f"Running: {' '.join(command)} in {self.repo_path}")
             result = subprocess.run(
                 command,
                 cwd=self.repo_path,
@@ -72,10 +73,18 @@ class GitHubPublisher:
             )
             success = result.returncode == 0
             output = result.stdout if success else result.stderr
+            
+            if success:
+                logger.info(f"✅ Command succeeded: {output[:200] if output else '(no output)'}")
+            else:
+                logger.error(f"❌ Command failed (code {result.returncode}): {output[:200]}")
+            
             return success, output
         except subprocess.TimeoutExpired:
+            logger.error("Command timed out")
             return False, "Command timed out"
         except Exception as e:
+            logger.error(f"Command exception: {e}")
             return False, str(e)
     
     def check_git_status(self) -> bool:
