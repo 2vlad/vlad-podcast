@@ -79,11 +79,8 @@ class GitHubPublisher:
             logger.info("Fetching main branch from remote...")
             subprocess.run(['git', 'fetch', 'origin', self.branch], cwd=self.repo_path, check=True, capture_output=True, timeout=30)
             
-            # Reset to remote branch to sync state
-            subprocess.run(['git', 'reset', '--hard', f'origin/{self.branch}'], cwd=self.repo_path, check=True, capture_output=True)
-            
-            # Set tracking branch
-            subprocess.run(['git', 'branch', '--set-upstream-to', f'origin/{self.branch}', self.branch], cwd=self.repo_path, check=True, capture_output=True)
+            # Checkout main branch from remote (creates local tracking branch)
+            subprocess.run(['git', 'checkout', '-b', self.branch, f'origin/{self.branch}'], cwd=self.repo_path, check=True, capture_output=True)
             
             logger.info("✅ Git repository initialized and synced with remote")
         except subprocess.CalledProcessError as e:
