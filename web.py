@@ -74,7 +74,9 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
             import subprocess
             
             cmd = [
-                'ffmpeg', '-i', str(file_path),
+                'ffmpeg',
+                '-loglevel', 'error',  # Only show errors, suppress warnings
+                '-i', str(file_path),
                 '-vn',  # No video
                 '-acodec', 'aac' if target_format == 'm4a' else 'libmp3lame',
                 '-q:a', '2',  # Quality

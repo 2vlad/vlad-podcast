@@ -117,6 +117,10 @@ class AudioDownloader:
             'extract_flat': False,
             'writethumbnail': False,
             'progress_hooks': [self._progress_hook] if self.progress_callback else [],
+            # Suppress FFmpeg warnings to prevent log flooding
+            'postprocessor_args': {
+                'ffmpeg': ['-loglevel', 'error']
+            },
             # Fix for 403 errors - updated for 2025
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'web']}},

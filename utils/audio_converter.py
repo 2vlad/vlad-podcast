@@ -43,6 +43,7 @@ def get_audio_info(file_path: Path) -> dict:
         cmd = [
             'ffprobe',
             '-v', 'quiet',
+            '-loglevel', 'error',  # Suppress warnings
             '-print_format', 'json',
             '-show_format',
             '-show_streams',
@@ -107,6 +108,7 @@ def convert_to_mp3(
     # Build FFmpeg command
     cmd = [
         'ffmpeg',
+        '-loglevel', 'error',  # Only show errors, suppress warnings
         '-i', str(input_path),
         '-vn',  # No video
         '-acodec', 'libmp3lame',
