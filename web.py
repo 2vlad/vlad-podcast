@@ -157,8 +157,75 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
         rss_manager.add_episode(fg, episode)
         rss_manager.save_feed(fg, settings.rss_file, max_items=settings.feed_max_items)
         
+        # Auto-publish to GitHub Pages if configured
+        if settings.auto_publish == 'github':
+            jobs[job_id]['message'] = 'Uploading to GitHub Releases...'
+            jobs[job_id]['progress'] = {'status': 'uploading', 'percent': 90}
+            
+            try:
+                publisher = GitHubPublisher(
+                    repo_path=settings.base_dir,
+                    branch=settings.github_branch
+                )
+                
+                # Upload audio file to GitHub Releases
+                upload_success = publisher.upload_to_release(audio_file)
+                
+                if upload_success:
+                    logger.info(f"Uploaded {audio_file.name} to GitHub Releases")
+                    
+                    # Update RSS with GitHub Releases URL
+                    jobs[job_id]['message'] = 'Updating RSS feed with GitHub URL...'
+                    jobs[job_id]['progress'] = {'status': 'updating_rss', 'percent': 95}
+                    
+                    # Re-create episode with GitHub Releases URL
+                    github_audio_url = f"https://github.com/{settings.github_repo}/releases/download/media-files/{audio_file.name}"
+                    
+                    # Update the episode's audio URL
+                    fg = rss_manager.load_existing_feed(settings.rss_file)
+                    if fg:
+                        # Remove the episode we just added (with Railway URL)
+                        import xml.etree.ElementTree as ET
+                        tree = ET.parse(settings.rss_file)
+                        root = tree.getroot()
+                        channel = root.find('channel')
+                        if channel:
+                            for item in channel.findall('item'):
+                                guid_elem = item.find('guid')
+                                if guid_elem is not None and guid_elem.text == file_hash:
+                                    enclosure = item.find('enclosure')
+                                    if enclosure is not None:
+                                        enclosure.set('url', github_audio_url)
+                            tree.write(settings.rss_file, encoding='utf-8', xml_declaration=True)
+                    
+                    # Publish RSS to GitHub Pages
+                    jobs[job_id]['message'] = 'Publishing to GitHub Pages...'
+                    jobs[job_id]['progress'] = {'status': 'publishing', 'percent': 98}
+                    
+                    publish_success = publisher.publish(
+                        episode_title=title,
+                        rss_file=settings.rss_file,
+                        patterns=["docs/"]
+                    )
+                    
+                    if publish_success:
+                        pages_url = f"https://2vlad.github.io/vlad-podcast/rss.xml"
+                        jobs[job_id]['message'] = f'Published to GitHub Pages!'
+                        jobs[job_id]['pages_url'] = pages_url
+                        logger.info(f"Published uploaded file to GitHub Pages: {pages_url}")
+                    else:
+                        jobs[job_id]['message'] = 'Upload completed (RSS publish failed)'
+                        logger.warning("RSS publish failed, file uploaded to GitHub Releases")
+                else:
+                    jobs[job_id]['message'] = 'Upload completed (GitHub upload failed)'
+                    logger.warning("GitHub Releases upload failed, files saved locally")
+            except Exception as e:
+                jobs[job_id]['message'] = f'Upload completed (publish error: {str(e)})'
+                logger.error(f"GitHub publish error: {e}")
+        
         jobs[job_id]['status'] = 'completed'
-        jobs[job_id]['message'] = 'Upload completed successfully!'
+        if 'message' not in jobs[job_id] or 'Publishing' in jobs[job_id]['message']:
+            jobs[job_id]['message'] = 'Upload completed successfully!'
         jobs[job_id]['progress'] = {'status': 'completed', 'percent': 100}
         
         logger.info(f"Successfully processed uploaded file: {original_filename} (ID: {file_hash})")

@@ -142,6 +142,62 @@ class GitHubPublisher:
             logger.error(f"Commit failed: {output}")
             return False
     
+    def upload_to_release(self, file_path: Path, release_tag: str = "media-files") -> bool:
+        """
+        Upload a file to GitHub Release.
+        
+        Args:
+            file_path: Path to the file to upload
+            release_tag: GitHub Release tag (default: media-files)
+            
+        Returns:
+            True if successful
+        """
+        if not file_path.exists():
+            logger.error(f"File not found: {file_path}")
+            return False
+        
+        try:
+            # Check if file already exists in release
+            check_cmd = ["gh", "release", "view", release_tag, "--json", "assets", "-q", f".assets[].name"]
+            result = subprocess.run(
+                check_cmd,
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                existing_assets = result.stdout.strip().split('\n')
+                if file_path.name in existing_assets:
+                    logger.info(f"File {file_path.name} already exists in release {release_tag}")
+                    return True
+            
+            # Upload file to release
+            upload_cmd = ["gh", "release", "upload", release_tag, str(file_path), "--clobber"]
+            result = subprocess.run(
+                upload_cmd,
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            
+            if result.returncode == 0:
+                logger.info(f"Uploaded {file_path.name} to release {release_tag}")
+                return True
+            else:
+                logger.error(f"Failed to upload to release: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            logger.error("Upload to release timed out")
+            return False
+        except Exception as e:
+            logger.error(f"Error uploading to release: {e}")
+            return False
+    
     def push(self, force: bool = False) -> bool:
         """
         Push commits to remote repository.
