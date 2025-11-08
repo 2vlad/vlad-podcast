@@ -96,7 +96,10 @@ class GitHubPublisher:
         """
         success, output = self._run_git_command(["git", "status", "--porcelain"])
         if success:
-            return len(output.strip()) > 0
+            has_changes = len(output.strip()) > 0
+            logger.info(f"Git status check: {'changes found' if has_changes else 'no changes'}")
+            return has_changes
+        logger.error("Git status check failed - not a git repository?")
         return False
     
     def sync_rss_to_docs(self, rss_file: Path) -> bool:
