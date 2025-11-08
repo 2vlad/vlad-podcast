@@ -27,6 +27,7 @@ class GitHubPublisher:
         self.branch = branch
         self.docs_dir = docs_dir or (self.repo_path / "docs")
         self._init_auth()
+        self._ensure_git_repo()
         
     def _init_auth(self):
         """Initialize authentication from environment."""
@@ -51,6 +52,44 @@ class GitHubPublisher:
                 logger.error(f"gh auth failed: {result.stderr.decode()}")
         except Exception as e:
             logger.error(f"Auth setup failed: {e}")
+    
+    def _ensure_git_repo(self):
+        """Ensure the directory is a git repository, initialize if needed."""
+        git_dir = self.repo_path / '.git'
+        
+        if git_dir.exists():
+            logger.info("Git repository already initialized")
+            return
+        
+        try:
+            logger.info(f"Initializing git repository in {self.repo_path}")
+            
+            # Initialize git repo
+            subprocess.run(['git', 'init'], cwd=self.repo_path, check=True, capture_output=True)
+            
+            # Configure git
+            subprocess.run(['git', 'config', 'user.name', 'Railway Bot'], cwd=self.repo_path, check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.email', 'bot@railway.app'], cwd=self.repo_path, check=True, capture_output=True)
+            
+            # Add remote
+            remote_url = 'https://github.com/2vlad/vlad-podcast.git'
+            subprocess.run(['git', 'remote', 'add', 'origin', remote_url], cwd=self.repo_path, check=True, capture_output=True)
+            
+            # Fetch main branch
+            logger.info("Fetching main branch from remote...")
+            subprocess.run(['git', 'fetch', 'origin', self.branch], cwd=self.repo_path, check=True, capture_output=True, timeout=30)
+            
+            # Reset to remote branch to sync state
+            subprocess.run(['git', 'reset', '--hard', f'origin/{self.branch}'], cwd=self.repo_path, check=True, capture_output=True)
+            
+            # Set tracking branch
+            subprocess.run(['git', 'branch', '--set-upstream-to', f'origin/{self.branch}', self.branch], cwd=self.repo_path, check=True, capture_output=True)
+            
+            logger.info("✅ Git repository initialized and synced with remote")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to initialize git repository: {e.stderr if e.stderr else e}")
+        except Exception as e:
+            logger.error(f"Error initializing git repository: {e}")
     
     def _run_git_command(self, command: list[str]) -> tuple[bool, str]:
         """
