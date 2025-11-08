@@ -26,6 +26,7 @@ class GitHubPublisher:
         self.repo_path = Path(repo_path)
         self.branch = branch
         self.docs_dir = docs_dir or (self.repo_path / "docs")
+        self._init_auth()
         
     def _init_auth(self):
         """Initialize authentication from environment."""
