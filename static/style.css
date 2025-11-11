@@ -781,11 +781,11 @@ input:focus {
     }
     
     .audio-player {
-        background: rgba(28, 28, 30, 0.95);
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(28, 28, 30, 0.95) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
         box-shadow: 
             0 -4px 20px rgba(0, 0, 0, 0.5),
-            0 -8px 32px rgba(0, 0, 0, 0.4);
+            0 -8px 32px rgba(0, 0, 0, 0.4) !important;
     }
     
     .audio-player-btn {
@@ -794,6 +794,16 @@ input:focus {
     
     .audio-player-btn svg {
         stroke: #1d1d1f !important;
+    }
+    
+    .audio-player-close svg,
+    .audio-player-volume svg {
+        stroke: #f5f5f7 !important;
+    }
+    
+    .audio-player-title,
+    .audio-player-meta {
+        color: #f5f5f7 !important;
     }
     
     /* Dark mode: white icon on hover */
