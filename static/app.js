@@ -541,8 +541,15 @@ function playEpisode(episode) {
     // Show player
     audioPlayer.style.display = 'block';
     
-    // Set audio source
-    audioElement.src = episode.audio_url;
+    // Set audio source - use proxy for GitHub URLs to avoid CORS
+    const audioUrl = episode.audio_url;
+    if (audioUrl.startsWith('https://github.com/')) {
+        // Use proxy endpoint
+        audioElement.src = `/api/proxy-audio?url=${encodeURIComponent(audioUrl)}`;
+    } else {
+        // Use direct URL for local files
+        audioElement.src = audioUrl;
+    }
     
     // Update info
     audioPlayerTitle.textContent = episode.title;

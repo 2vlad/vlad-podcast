@@ -574,6 +574,48 @@ def serve_media(filename):
         return jsonify({'error': 'File not found'}), 404
 
 
+@app.route('/api/proxy-audio')
+def proxy_audio():
+    """Proxy audio files from GitHub Releases to avoid CORS issues."""
+    import requests
+    from flask import Response, stream_with_context
+    
+    url = request.args.get('url')
+    if not url:
+        return jsonify({'error': 'URL parameter required'}), 400
+    
+    # Only allow GitHub URLs for security
+    if not url.startswith('https://github.com/'):
+        return jsonify({'error': 'Only GitHub URLs allowed'}), 403
+    
+    try:
+        # Stream the file from GitHub
+        resp = requests.get(url, stream=True, timeout=30)
+        resp.raise_for_status()
+        
+        # Get content type from remote response
+        content_type = resp.headers.get('Content-Type', 'audio/mpeg')
+        
+        def generate():
+            for chunk in resp.iter_content(chunk_size=8192):
+                if chunk:
+                    yield chunk
+        
+        response = Response(stream_with_context(generate()), content_type=content_type)
+        response.headers['Accept-Ranges'] = 'bytes'
+        response.headers['Cache-Control'] = 'public, max-age=31536000'
+        
+        # Copy content-length if available
+        if 'Content-Length' in resp.headers:
+            response.headers['Content-Length'] = resp.headers['Content-Length']
+        
+        return response
+        
+    except requests.RequestException as e:
+        logger.error(f"Failed to proxy audio from {url}: {e}")
+        return jsonify({'error': 'Failed to fetch audio file'}), 502
+
+
 @app.route('/rss.xml')
 def serve_rss():
     """Serve RSS feed."""
