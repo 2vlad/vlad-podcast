@@ -458,13 +458,6 @@ function resetUploadForm() {
     uploadBtn.disabled = false;
 }
 
-// Update tab switching to reset upload form
-tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        resetUploadForm();
-    });
-});
-
 // ===== AUDIO PLAYER =====
 const audioPlayer = document.getElementById('audioPlayer');
 const audioElement = document.getElementById('audioElement');
