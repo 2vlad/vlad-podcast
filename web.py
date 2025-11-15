@@ -660,6 +660,45 @@ def sync_rss():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/fix-rss-namespace', methods=['POST'])
+def fix_rss_namespace():
+    """Fix RSS namespace issues by regenerating the feed."""
+    try:
+        import subprocess
+        import sys
+        
+        settings = get_settings()
+        
+        # Run the fix script
+        result = subprocess.run(
+            [sys.executable, 'fix_rss_namespace.py'],
+            capture_output=True,
+            text=True,
+            cwd=settings.base_dir,
+            timeout=120
+        )
+        
+        if result.returncode == 0:
+            logger.info("RSS namespace fix completed successfully")
+            return jsonify({
+                'success': True,
+                'message': 'RSS namespace fixed successfully',
+                'output': result.stdout
+            })
+        else:
+            logger.error(f"RSS namespace fix failed: {result.stderr}")
+            return jsonify({
+                'success': False,
+                'message': 'RSS namespace fix failed',
+                'error': result.stderr
+            }), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Script execution timed out'}), 500
+    except Exception as e:
+        logger.error(f"RSS namespace fix error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     # Check configuration
     try:
