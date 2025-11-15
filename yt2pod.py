@@ -49,14 +49,17 @@ def main():
     
     logger.info(f"Successfully parsed {len(parsed_urls)} valid URL(s)")
     
-    # Initialize downloader and RSS manager
+    # Initialize downloader, RSS manager and splitter
     from utils.downloader import AudioDownloader
     from utils.rss_manager import RSSManager, EpisodeData
+    from utils.audio_splitter import AudioSplitter
     
     downloader = AudioDownloader(
         output_dir=settings.media_dir,
         audio_format=settings.audio_format
     )
+    
+    splitter = AudioSplitter()
     
     rss_manager = RSSManager(
         site_url=settings.site_url,
@@ -104,32 +107,87 @@ def main():
             logger.info(f"  Duration: {metadata.formatted_duration}")
             logger.info(f"  Uploader: {metadata.uploader}")
             
-            # Check if episode already exists
-            if metadata.video_id in existing_guids:
-                logger.warning(f"  Episode already exists in feed, skipping")
-                continue
+            # Check if audio needs to be split (videos > 1 hour)
+            audio_files_to_process = []
             
-            # Add episode to RSS feed
-            audio_url = f"{settings.media_base_url}/{audio_file.name}"
-            file_size = audio_file.stat().st_size
-            mime_type = "audio/mp4" if settings.audio_format == "m4a" else "audio/mpeg"
+            if splitter.should_split(metadata.duration):
+                logger.info(f"  Video duration ({metadata.formatted_duration}) exceeds 1 hour, splitting into parts...")
+                
+                try:
+                    segments = splitter.split_audio(audio_file)
+                    logger.info(f"  ✓ Split into {len(segments)} parts")
+                    
+                    audio_files_to_process = segments
+                    
+                    # Remove original file after successful split
+                    if audio_file.exists():
+                        audio_file.unlink()
+                        logger.info(f"  ✓ Removed original file")
+                        
+                except Exception as e:
+                    logger.error(f"  ✗ Failed to split audio: {e}")
+                    logger.warning(f"  Using full video as single episode")
+                    audio_files_to_process = [{'file': audio_file, 'part': None}]
+            else:
+                # Video is short enough, process as single episode
+                audio_files_to_process = [{'file': audio_file, 'part': None}]
             
-            episode = EpisodeData(
-                guid=metadata.video_id,
-                title=metadata.title,
-                link=metadata.webpage_url or parsed_url.normalized_url,
-                description=metadata.description or metadata.title,
-                audio_url=audio_url,
-                audio_file_size=file_size,
-                audio_mime_type=mime_type,
-                pub_date=metadata.pub_date,
-                duration=metadata.formatted_duration,
-                image_url=metadata.thumbnail_url,
-            )
+            # Process each audio file (either segments or single file)
+            episodes_added = 0
             
-            rss_manager.add_episode(fg, episode)
-            existing_guids.add(metadata.video_id)
-            logger.info(f"  ✓ Added to RSS feed")
+            for item in audio_files_to_process:
+                # Handle both segment objects and simple dict
+                if isinstance(item, dict):
+                    # Simple file (no splitting)
+                    current_file = item['file']
+                    part_number = None
+                    total_parts = 1
+                    segment_duration = None
+                else:
+                    # Segment object
+                    current_file = item.file_path
+                    part_number = item.part_number
+                    total_parts = item.total_parts
+                    segment_duration = item.formatted_duration
+                
+                # Generate unique GUID for each part
+                if part_number:
+                    episode_guid = f"{metadata.video_id}_part{part_number}"
+                    episode_title = f"{metadata.title} (Part {part_number}/{total_parts})"
+                else:
+                    episode_guid = metadata.video_id
+                    episode_title = metadata.title
+                
+                # Skip if already exists
+                if episode_guid in existing_guids:
+                    logger.warning(f"  Episode {episode_guid} already exists in feed, skipping")
+                    continue
+                
+                # Add episode to RSS feed
+                audio_url = f"{settings.media_base_url}/{current_file.name}"
+                file_size = current_file.stat().st_size
+                mime_type = "audio/mp4" if settings.audio_format == "m4a" else "audio/mpeg"
+                
+                episode = EpisodeData(
+                    guid=episode_guid,
+                    title=episode_title,
+                    link=metadata.webpage_url or parsed_url.normalized_url,
+                    description=metadata.description or metadata.title,
+                    audio_url=audio_url,
+                    audio_file_size=file_size,
+                    audio_mime_type=mime_type,
+                    pub_date=metadata.pub_date,
+                    duration=segment_duration or metadata.formatted_duration,
+                    image_url=metadata.thumbnail_url,
+                )
+                
+                rss_manager.add_episode(fg, episode)
+                existing_guids.add(episode_guid)
+                episodes_added += 1
+                logger.info(f"  ✓ Added to RSS feed: {episode_title}")
+            
+            if episodes_added == 0:
+                logger.warning(f"  No new episodes added (already in feed)")
             
         except Exception as e:
             logger.error(f"  ✗ Failed to process video: {e}")

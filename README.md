@@ -5,6 +5,7 @@ Convert YouTube videos to a personal podcast RSS feed for offline listening on y
 ## Features
 
 - ✅ Download audio from YouTube videos (best quality)
+- ✅ **Auto-split long videos** (>1 hour) into separate episodes
 - ✅ Convert to M4A (AAC) or MP3 format
 - ✅ Generate RSS 2.0 feed with iTunes podcast tags
 - ✅ Automatic duplicate detection (no duplicate episodes)
@@ -265,3 +266,10 @@ MIT License - see LICENSE file for details.
 ## Disclaimer
 
 This tool is for personal use. Respect YouTube's Terms of Service and content creators' rights. Do not redistribute content without permission.
+
+## Additional Documentation
+
+- [Long Video Splitting Guide](LONG_VIDEO_SPLITTING.md) - Automatic splitting of videos >1 hour into separate episodes
+- [Quick Start Guide](QUICKSTART.md) - Get started quickly
+- [Complete Guide](COMPLETE_GUIDE.md) - Full documentation
+- [GitHub Pages Setup](GITHUB_PAGES_SETUP.md) - Deploy to GitHub Pages

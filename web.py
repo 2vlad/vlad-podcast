@@ -20,6 +20,7 @@ from utils.url_processor import process_urls
 from utils.downloader import AudioDownloader
 from utils.rss_manager import RSSManager, EpisodeData, get_mime_type_from_filename
 from utils.github_publisher import GitHubPublisher
+from utils.audio_splitter import AudioSplitter
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -286,11 +287,46 @@ def process_video_job(job_id: int, url: str):
             video_id=parsed_url.video_id
         )
         
-        jobs[job_id]['message'] = 'Updating RSS feed...'
+        jobs[job_id]['message'] = 'Checking video duration...'
         jobs[job_id]['title'] = metadata.title
         jobs[job_id]['duration'] = metadata.formatted_duration
         
+        # Check if audio needs to be split (videos > 1 hour)
+        splitter = AudioSplitter()
+        audio_files_to_process = []
+        
+        if splitter.should_split(metadata.duration):
+            jobs[job_id]['message'] = f'Video is {metadata.formatted_duration}, splitting into parts...'
+            jobs[job_id]['progress'] = {'status': 'splitting', 'percent': 85}
+            
+            try:
+                segments = splitter.split_audio(audio_file)
+                logger.info(f"Split video into {len(segments)} parts")
+                
+                # Store segment info for RSS generation
+                audio_files_to_process = segments
+                
+                # Remove original file after successful split
+                if audio_file.exists():
+                    audio_file.unlink()
+                    logger.info(f"Removed original file: {audio_file}")
+                
+                jobs[job_id]['message'] = f'Split into {len(segments)} episodes'
+                jobs[job_id]['split_parts'] = len(segments)
+                
+            except Exception as e:
+                logger.error(f"Failed to split audio: {e}")
+                # If splitting fails, use original file
+                audio_files_to_process = [{'file': audio_file, 'part': None}]
+                jobs[job_id]['message'] = 'Split failed, using full video'
+        else:
+            # Video is short enough, process as single episode
+            audio_files_to_process = [{'file': audio_file, 'part': None}]
+        
         # Update RSS
+        jobs[job_id]['message'] = 'Updating RSS feed...'
+        jobs[job_id]['progress'] = {'status': 'feed', 'percent': 90}
+        
         rss_manager = RSSManager(
             site_url=settings.site_url,
             media_base_url=settings.media_base_url,
@@ -308,37 +344,74 @@ def process_video_job(job_id: int, url: str):
         
         existing_guids = rss_manager.get_existing_guids(settings.rss_file)
         
-        if metadata.video_id in existing_guids:
+        # Process each audio file (either segments or single file)
+        episodes_added = 0
+        
+        for item in audio_files_to_process:
+            # Handle both segment objects and simple dict
+            if isinstance(item, dict):
+                # Simple file (no splitting)
+                current_file = item['file']
+                part_number = None
+                total_parts = 1
+                segment_duration = None
+            else:
+                # Segment object
+                current_file = item.file_path
+                part_number = item.part_number
+                total_parts = item.total_parts
+                segment_duration = item.formatted_duration
+            
+            # Generate unique GUID for each part
+            if part_number:
+                episode_guid = f"{metadata.video_id}_part{part_number}"
+                episode_title = f"{metadata.title} (Part {part_number}/{total_parts})"
+            else:
+                episode_guid = metadata.video_id
+                episode_title = metadata.title
+            
+            # Skip if already exists
+            if episode_guid in existing_guids:
+                logger.info(f"Episode {episode_guid} already in feed, skipping")
+                continue
+            
+            # Create episode
+            audio_url = f"{settings.media_base_url}/{current_file.name}"
+            file_size = current_file.stat().st_size
+            mime_type = get_mime_type_from_filename(current_file.name)
+            
+            episode = EpisodeData(
+                guid=episode_guid,
+                title=episode_title,
+                link=metadata.webpage_url or parsed_url.normalized_url,
+                description=metadata.description or metadata.title,
+                audio_url=audio_url,
+                audio_file_size=file_size,
+                audio_mime_type=mime_type,
+                pub_date=datetime.now(timezone.utc),
+                duration=segment_duration or metadata.formatted_duration,
+                image_url=metadata.thumbnail_url,
+            )
+            
+            rss_manager.add_episode(fg, episode)
+            existing_guids.add(episode_guid)
+            episodes_added += 1
+            logger.info(f"Added episode: {episode_title}")
+        
+        if episodes_added == 0:
             jobs[job_id]['status'] = 'completed'
             jobs[job_id]['message'] = 'Already in feed'
             jobs[job_id]['duplicate'] = True
             return
         
-        # Add episode
-        audio_url = f"{settings.media_base_url}/{audio_file.name}"
-        file_size = audio_file.stat().st_size
-        mime_type = get_mime_type_from_filename(audio_file.name)
-        
-        episode = EpisodeData(
-            guid=metadata.video_id,
-            title=metadata.title,
-            link=metadata.webpage_url or parsed_url.normalized_url,
-            description=metadata.description or metadata.title,
-            audio_url=audio_url,
-            audio_file_size=file_size,
-            audio_mime_type=mime_type,
-            pub_date=datetime.now(timezone.utc),  # Use current time instead of YouTube upload date
-            duration=metadata.formatted_duration,
-            image_url=metadata.thumbnail_url,
-        )
-        
-        rss_manager.add_episode(fg, episode)
+        # Save RSS with all episodes
         rss_manager.save_feed(fg, settings.rss_file, max_items=settings.feed_max_items)
+        logger.info(f"Added {episodes_added} episode(s) to RSS feed")
         
         # Auto-publish to GitHub Pages if configured
         if settings.auto_publish == 'github':
             jobs[job_id]['message'] = 'Publishing to GitHub Pages...'
-            jobs[job_id]['progress'] = {'status': 'publishing', 'percent': 100}
+            jobs[job_id]['progress'] = {'status': 'publishing', 'percent': 95}
             
             try:
                 publisher = GitHubPublisher(
@@ -346,16 +419,61 @@ def process_video_job(job_id: int, url: str):
                     branch=settings.github_branch
                 )
                 
-                # Publish (sync RSS to docs, git add, commit, push)
+                # Upload all audio files to GitHub Releases
+                uploaded_count = 0
+                for item in audio_files_to_process:
+                    current_file = item.file_path if hasattr(item, 'file_path') else item['file']
+                    
+                    jobs[job_id]['message'] = f'Uploading {current_file.name} to GitHub Releases...'
+                    upload_success = publisher.upload_to_release(current_file)
+                    
+                    if upload_success:
+                        uploaded_count += 1
+                        logger.info(f"Uploaded {current_file.name} to GitHub Releases")
+                
+                if uploaded_count > 0:
+                    # Update RSS with GitHub Releases URLs
+                    jobs[job_id]['message'] = 'Updating RSS with GitHub URLs...'
+                    jobs[job_id]['progress'] = {'status': 'updating_rss', 'percent': 97}
+                    
+                    # Re-load RSS and update audio URLs
+                    import xml.etree.ElementTree as ET
+                    tree = ET.parse(settings.rss_file)
+                    root = tree.getroot()
+                    channel = root.find('channel')
+                    
+                    if channel:
+                        for item_elem in channel.findall('item'):
+                            guid_elem = item_elem.find('guid')
+                            if guid_elem is not None:
+                                # Check if this is one of our episodes
+                                if guid_elem.text.startswith(metadata.video_id):
+                                    enclosure = item_elem.find('enclosure')
+                                    if enclosure is not None:
+                                        # Extract filename from current URL
+                                        current_url = enclosure.get('url', '')
+                                        filename = current_url.split('/')[-1]
+                                        # Replace with GitHub Releases URL
+                                        github_url = f"https://github.com/{settings.github_repo}/releases/download/media-files/{filename}"
+                                        enclosure.set('url', github_url)
+                        
+                        tree.write(settings.rss_file, encoding='utf-8', xml_declaration=True)
+                        logger.info(f"Updated {uploaded_count} audio URL(s) to GitHub Releases")
+                
+                # Publish RSS to GitHub Pages
+                jobs[job_id]['message'] = 'Publishing RSS to GitHub Pages...'
+                jobs[job_id]['progress'] = {'status': 'publishing', 'percent': 99}
+                
+                episode_title = f"{metadata.title} ({episodes_added} episode{'s' if episodes_added > 1 else ''})"
                 publish_success = publisher.publish(
-                    episode_title=metadata.title,
+                    episode_title=episode_title,
                     rss_file=settings.rss_file,
                     patterns=["docs/"]
                 )
                 
                 if publish_success:
                     pages_url = f"https://2vlad.github.io/vlad-podcast/rss.xml"
-                    jobs[job_id]['message'] = f'Published to GitHub Pages!'
+                    jobs[job_id]['message'] = f'Published {episodes_added} episode(s) to GitHub Pages!'
                     jobs[job_id]['pages_url'] = pages_url
                     logger.info(f"Published to GitHub Pages: {pages_url}")
                 else:
