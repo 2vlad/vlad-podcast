@@ -296,6 +296,7 @@ function showResult(data) {
     hideAll();
     inputGroup.classList.remove('processing');
     submitBtn.disabled = false;
+    uploadBtn.disabled = false;
     
     result.style.display = 'block';
     
@@ -314,8 +315,9 @@ function showResult(data) {
         }, 1000);
     }
     
-    // Clear input
+    // Clear inputs and reset forms
     urlInput.value = '';
+    resetUploadForm();
     currentJobId = null;
 }
 
@@ -408,13 +410,11 @@ uploadBtn.addEventListener('click', () => {
     const description = descriptionInput.value.trim();
     
     // Reset UI
-    hideAll();
     inputGroup.classList.add('processing');
     uploadBtn.disabled = true;
     
-    // Show status
-    status.style.display = 'flex';
-    statusText.textContent = 'Загрузка файла...';
+    // Show loading status
+    showStatus('Загрузка файла...');
     
     // Create FormData
     const formData = new FormData();
@@ -432,11 +432,12 @@ uploadBtn.addEventListener('click', () => {
         if (data.error) {
             showError(data.error);
             uploadBtn.disabled = false;
+            resetUploadForm();
             return;
         }
         
         currentJobId = data.job_id;
-        statusText.textContent = 'Обработка файла...';
+        showStatus('Обработка файла...');
         
         // Start status polling
         startStatusCheck();
@@ -444,6 +445,7 @@ uploadBtn.addEventListener('click', () => {
     .catch(err => {
         showError('Ошибка загрузки: ' + err.message);
         uploadBtn.disabled = false;
+        resetUploadForm();
     });
 });
 
