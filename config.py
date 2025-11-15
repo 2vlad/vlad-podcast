@@ -58,6 +58,9 @@ class Settings:
     podcast_category: str = field(
         default_factory=lambda: config('PODCAST_CATEGORY', default='Technology', cast=str)
     )
+    podcast_image: Optional[str] = field(
+        default_factory=lambda: config('PODCAST_IMAGE', default=None)
+    )
     
     # Auto-publish settings
     auto_publish: str = field(

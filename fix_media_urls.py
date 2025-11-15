@@ -29,6 +29,7 @@ def fix_media_urls():
             author=settings.podcast_author,
             language=settings.podcast_language,
             category=settings.podcast_category,
+            image_url=settings.podcast_image,
         )
         
         fg = rss_manager.load_existing_feed(settings.rss_file)

@@ -36,6 +36,7 @@ def main():
             author=settings.podcast_author,
             language=settings.podcast_language,
             category=settings.podcast_category,
+            image_url=settings.podcast_image,
         )
         
         # Get existing episodes from current feed

@@ -123,6 +123,7 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
             author=settings.podcast_author,
             language=settings.podcast_language,
             category=settings.podcast_category,
+            image_url=settings.podcast_image,
         )
         
         fg = rss_manager.load_existing_feed(settings.rss_file)
@@ -298,6 +299,7 @@ def process_video_job(job_id: int, url: str):
             author=settings.podcast_author,
             language=settings.podcast_language,
             category=settings.podcast_category,
+            image_url=settings.podcast_image,
         )
         
         fg = rss_manager.load_existing_feed(settings.rss_file)
