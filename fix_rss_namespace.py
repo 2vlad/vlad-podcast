@@ -13,8 +13,11 @@ import logging
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config import settings
+from config import Settings
 from utils.rss_manager import RSSManager, EpisodeData, get_mime_type_from_filename
+
+# Initialize settings
+settings = Settings()
 
 logging.basicConfig(
     level=logging.INFO,
