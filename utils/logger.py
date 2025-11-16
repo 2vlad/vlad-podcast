@@ -4,22 +4,45 @@ Logging configuration for YouTube to Podcast converter.
 
 import logging
 import sys
+import os
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
 
-def setup_logger(name: str = "yt2pod", level: int = logging.INFO, log_file: str = None) -> logging.Logger:
+def get_log_level_from_env() -> int:
+    """
+    Get logging level from environment variable LOG_LEVEL.
+    
+    Returns:
+        Logging level (default: INFO)
+    """
+    level_name = os.environ.get('LOG_LEVEL', 'INFO').upper()
+    level_map = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL,
+    }
+    return level_map.get(level_name, logging.INFO)
+
+
+def setup_logger(name: str = "yt2pod", level: int = None, log_file: str = None) -> logging.Logger:
     """
     Configure and return a logger with console and optional file output.
     
     Args:
         name: Logger name
-        level: Logging level (default: INFO)
+        level: Logging level (default: from LOG_LEVEL env var or INFO)
         log_file: Optional log file path (default: logs/{name}.log)
     
     Returns:
         Configured logger instance
     """
+    # Use provided level, or get from environment, or default to INFO
+    if level is None:
+        level = get_log_level_from_env()
+    
     logger = logging.getLogger(name)
     logger.setLevel(level)
     

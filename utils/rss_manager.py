@@ -135,33 +135,62 @@ class RSSManager:
         Returns:
             FeedEntry instance
         """
-        fe = fg.add_entry()
+        logger.info(f"Adding episode to RSS feed - GUID: {episode.guid}")
+        logger.info(f"  Title: {episode.title}")
+        logger.info(f"  Audio URL: {episode.audio_url}")
+        logger.info(f"  File size: {episode.audio_file_size / (1024 * 1024):.2f} MB")
+        logger.info(f"  MIME type: {episode.audio_mime_type}")
+        logger.info(f"  Duration: {episode.duration}")
         
-        # Basic episode fields
-        fe.id(episode.guid)
-        fe.guid(episode.guid, permalink=False)
-        fe.title(episode.title)
-        fe.link(href=episode.link)
-        fe.description(episode.description)
-        fe.pubDate(episode.pub_date)
-        
-        # Enclosure (audio file)
-        fe.enclosure(
-            url=episode.audio_url,
-            length=str(episode.audio_file_size),
-            type=episode.audio_mime_type
-        )
-        
-        # iTunes episode tags
-        fe.podcast.itunes_duration(episode.duration)
-        if episode.image_url:
-            try:
-                # Try to add thumbnail, but skip if format is not supported (e.g., WebP)
-                fe.podcast.itunes_image(episode.image_url)
-            except Exception as e:
-                logger.warning(f"Could not add thumbnail for episode {episode.guid}: {e}")
-        
-        return fe
+        try:
+            fe = fg.add_entry()
+            logger.debug(f"Created feed entry for {episode.guid}")
+            
+            # Basic episode fields
+            fe.id(episode.guid)
+            fe.guid(episode.guid, permalink=False)
+            logger.debug(f"Set GUID: {episode.guid}")
+            
+            fe.title(episode.title)
+            logger.debug(f"Set title: {episode.title}")
+            
+            fe.link(href=episode.link)
+            logger.debug(f"Set link: {episode.link}")
+            
+            fe.description(episode.description)
+            logger.debug(f"Set description (length: {len(episode.description)} chars)")
+            
+            fe.pubDate(episode.pub_date)
+            logger.debug(f"Set pub date: {episode.pub_date}")
+            
+            # Enclosure (audio file)
+            logger.debug(f"Adding enclosure: {episode.audio_url}")
+            fe.enclosure(
+                url=episode.audio_url,
+                length=str(episode.audio_file_size),
+                type=episode.audio_mime_type
+            )
+            logger.debug("Enclosure added successfully")
+            
+            # iTunes episode tags
+            if episode.duration:
+                fe.podcast.itunes_duration(episode.duration)
+                logger.debug(f"Set duration: {episode.duration}")
+            
+            if episode.image_url:
+                try:
+                    # Try to add thumbnail, but skip if format is not supported (e.g., WebP)
+                    fe.podcast.itunes_image(episode.image_url)
+                    logger.debug(f"Set thumbnail: {episode.image_url}")
+                except Exception as e:
+                    logger.warning(f"Could not add thumbnail for episode {episode.guid}: {e}")
+            
+            logger.info(f"✅ Successfully added episode {episode.guid} to feed")
+            return fe
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to add episode {episode.guid} to feed: {e}", exc_info=True)
+            raise
     
     def load_existing_feed(self, rss_file: Path) -> Optional[FeedGenerator]:
         """
@@ -315,12 +344,18 @@ class RSSManager:
             rss_file: Path to save RSS file
             max_items: Maximum number of items to keep (None = no limit)
         """
+        logger.info(f"Saving RSS feed to: {rss_file}")
+        
         # Ensure parent directory exists
         rss_file.parent.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"RSS directory verified: {rss_file.parent}")
+        
+        # Count current episodes
+        entries = fg.entry()
+        logger.info(f"Feed contains {len(entries)} episodes")
         
         # Limit items if requested
         if max_items and max_items > 0:
-            entries = fg.entry()
             if len(entries) > max_items:
                 # Keep only the most recent items
                 # Note: feedgen doesn't have a built-in way to remove entries,
@@ -328,5 +363,20 @@ class RSSManager:
                 logger.warning(f"Feed has {len(entries)} items, but max is {max_items}. Trimming not yet implemented.")
         
         # Write RSS file
-        fg.rss_file(str(rss_file), pretty=True)
-        logger.info(f"Saved RSS feed to {rss_file}")
+        try:
+            logger.debug(f"Writing RSS to file: {rss_file}")
+            fg.rss_file(str(rss_file), pretty=True)
+            
+            # Verify file was created and log size
+            if rss_file.exists():
+                file_size = rss_file.stat().st_size
+                file_size_kb = file_size / 1024
+                logger.info(f"✅ RSS feed saved successfully - Size: {file_size_kb:.2f} KB ({file_size} bytes)")
+                logger.info(f"RSS file: {rss_file}")
+            else:
+                logger.error(f"❌ RSS file was not created: {rss_file}")
+                raise FileNotFoundError(f"RSS file was not created: {rss_file}")
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to save RSS feed: {e}", exc_info=True)
+            raise

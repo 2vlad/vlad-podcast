@@ -47,36 +47,58 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
     global jobs
     
     try:
+        logger.info(f"[Job {job_id}] Starting upload processing for: {original_filename}")
+        
+        # Check if file exists and log size
+        if not file_path.exists():
+            logger.error(f"[Job {job_id}] File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        file_size_bytes = file_path.stat().st_size
+        file_size_mb = file_size_bytes / (1024 * 1024)
+        logger.info(f"[Job {job_id}] File size: {file_size_mb:.2f} MB ({file_size_bytes} bytes)")
+        logger.info(f"[Job {job_id}] File path: {file_path}")
+        logger.info(f"[Job {job_id}] Original filename: {original_filename}")
+        
         jobs[job_id]['status'] = 'processing'
         jobs[job_id]['message'] = 'Processing uploaded file...'
         jobs[job_id]['progress'] = {'status': 'processing', 'percent': 0}
         
         settings = get_settings()
+        logger.info(f"[Job {job_id}] Settings loaded - Media dir: {settings.media_dir}, Audio format: {settings.audio_format}")
+        
         # Ensure directories exist before processing
         settings.ensure_directories()
+        logger.info(f"[Job {job_id}] Directories verified")
         
         # Generate unique ID from file content
+        logger.info(f"[Job {job_id}] Generating file hash...")
         with open(file_path, 'rb') as f:
             file_hash = hashlib.md5(f.read()).hexdigest()[:11]
         
+        logger.info(f"[Job {job_id}] Generated file hash: {file_hash}")
         jobs[job_id]['video_id'] = file_hash
         
         # Determine file extension
         ext = file_path.suffix.lower()
         target_format = settings.audio_format
+        logger.info(f"[Job {job_id}] File extension: {ext}, Target format: {target_format}")
         
         # Convert to target format if needed
         if ext == '.mp4':
+            logger.info(f"[Job {job_id}] MP4 file detected, starting conversion to {target_format}")
             jobs[job_id]['message'] = 'Converting MP4 to audio...'
             jobs[job_id]['progress'] = {'status': 'converting', 'percent': 50}
             
             # Use ffmpeg to convert
             output_file = settings.media_dir / f"{file_hash}.{target_format}"
+            logger.info(f"[Job {job_id}] Output file will be: {output_file}")
+            
             import subprocess
             
             cmd = [
                 'ffmpeg',
-                '-loglevel', 'error',  # Only show errors, suppress warnings
+                '-loglevel', 'info',  # Show more detailed logs for debugging
                 '-i', str(file_path),
                 '-vn',  # No video
                 '-acodec', 'aac' if target_format == 'm4a' else 'libmp3lame',
@@ -84,23 +106,63 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
                 str(output_file)
             ]
             
+            logger.info(f"[Job {job_id}] FFmpeg command: {' '.join(cmd)}")
+            logger.info(f"[Job {job_id}] Starting FFmpeg conversion...")
+            
             try:
-                subprocess.run(cmd, check=True, capture_output=True)
-                file_path.unlink()  # Remove original file
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+                logger.info(f"[Job {job_id}] FFmpeg conversion successful")
+                logger.debug(f"[Job {job_id}] FFmpeg stdout: {result.stdout}")
+                
+                # Check output file was created
+                if not output_file.exists():
+                    logger.error(f"[Job {job_id}] Output file was not created: {output_file}")
+                    raise FileNotFoundError(f"FFmpeg did not create output file: {output_file}")
+                
+                output_size_mb = output_file.stat().st_size / (1024 * 1024)
+                logger.info(f"[Job {job_id}] Converted file size: {output_size_mb:.2f} MB")
+                
+                # Remove original file
+                file_path.unlink()
+                logger.info(f"[Job {job_id}] Removed original MP4 file: {file_path}")
                 audio_file = output_file
+                
             except subprocess.CalledProcessError as e:
-                logger.error(f"FFmpeg conversion failed: {e.stderr.decode()}")
+                logger.error(f"[Job {job_id}] FFmpeg conversion failed with code {e.returncode}")
+                logger.error(f"[Job {job_id}] FFmpeg stderr: {e.stderr}")
+                logger.error(f"[Job {job_id}] FFmpeg stdout: {e.stdout}")
+                logger.warning(f"[Job {job_id}] Falling back to using original MP4 file")
+                
                 # If conversion fails, just rename the file
                 audio_file = file_path.rename(settings.media_dir / f"{file_hash}{ext}")
+                logger.info(f"[Job {job_id}] Renamed original file to: {audio_file}")
         else:
             # MP3/M4A files - just rename
+            logger.info(f"[Job {job_id}] Audio file detected ({ext}), renaming without conversion")
             audio_file = file_path.rename(settings.media_dir / f"{file_hash}{ext}")
+            logger.info(f"[Job {job_id}] Renamed file to: {audio_file}")
         
         jobs[job_id]['message'] = 'Extracting metadata...'
         jobs[job_id]['progress'] = {'status': 'metadata', 'percent': 75}
         
+        logger.info(f"[Job {job_id}] Extracting metadata from audio file")
+        
         # Get file size
         file_size = audio_file.stat().st_size
+        file_size_mb = file_size / (1024 * 1024)
+        logger.info(f"[Job {job_id}] Final audio file size: {file_size_mb:.2f} MB ({file_size} bytes)")
+        
+        # Extract duration using ffprobe
+        splitter = AudioSplitter()
+        audio_duration = splitter.get_audio_duration(audio_file)
+        
+        # Format duration as HH:MM:SS
+        hours = audio_duration // 3600
+        minutes = (audio_duration % 3600) // 60
+        seconds = audio_duration % 60
+        formatted_duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}" if hours > 0 else f"{minutes:02d}:{seconds:02d}"
+        
+        logger.info(f"[Job {job_id}] Audio duration: {formatted_duration} ({audio_duration} seconds)")
         
         # Use provided title or filename
         if not title:
@@ -109,13 +171,51 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
         if not description:
             description = f"Uploaded audio: {original_filename}"
         
+        logger.info(f"[Job {job_id}] Episode title: {title}")
+        logger.info(f"[Job {job_id}] Episode description: {description[:100]}...")
+        
         jobs[job_id]['title'] = title
-        jobs[job_id]['duration'] = 'Unknown'  # Could extract with ffprobe if needed
+        jobs[job_id]['duration'] = formatted_duration
+        
+        # Check if audio needs to be split (files > 1 hour)
+        audio_files_to_process = []
+        
+        if splitter.should_split(audio_duration):
+            logger.info(f"[Job {job_id}] Audio is {formatted_duration}, splitting into parts...")
+            jobs[job_id]['message'] = f'Audio is {formatted_duration}, splitting into parts...'
+            jobs[job_id]['progress'] = {'status': 'splitting', 'percent': 80}
+            
+            try:
+                segments = splitter.split_audio(audio_file)
+                logger.info(f"[Job {job_id}] Split audio into {len(segments)} parts")
+                
+                # Store segment info for RSS generation
+                audio_files_to_process = segments
+                
+                # Remove original file after successful split
+                if audio_file.exists():
+                    audio_file.unlink()
+                    logger.info(f"[Job {job_id}] Removed original file: {audio_file}")
+                
+                jobs[job_id]['message'] = f'Split into {len(segments)} episodes'
+                jobs[job_id]['split_parts'] = len(segments)
+                
+            except Exception as e:
+                logger.error(f"[Job {job_id}] Failed to split audio: {e}", exc_info=True)
+                # If splitting fails, use original file
+                audio_files_to_process = [{'file': audio_file, 'part': None, 'duration': formatted_duration}]
+                jobs[job_id]['message'] = 'Split failed, using full audio'
+        else:
+            # Audio is short enough, process as single episode
+            logger.info(f"[Job {job_id}] Audio duration {formatted_duration} is under 1 hour, no splitting needed")
+            audio_files_to_process = [{'file': audio_file, 'part': None, 'duration': formatted_duration}]
         
         jobs[job_id]['message'] = 'Updating RSS feed...'
         jobs[job_id]['progress'] = {'status': 'feed', 'percent': 90}
+        logger.info(f"[Job {job_id}] Starting RSS feed update")
         
         # Update RSS
+        logger.info(f"[Job {job_id}] Creating RSS manager")
         rss_manager = RSSManager(
             site_url=settings.site_url,
             media_base_url=settings.media_base_url,
@@ -126,38 +226,99 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
             category=settings.podcast_category,
             image_url=settings.podcast_image,
         )
+        logger.info(f"[Job {job_id}] RSS manager created - Site URL: {settings.site_url}, Media base URL: {settings.media_base_url}")
         
+        logger.info(f"[Job {job_id}] Loading existing RSS feed from: {settings.rss_file}")
         fg = rss_manager.load_existing_feed(settings.rss_file)
         if fg is None:
+            logger.info(f"[Job {job_id}] No existing feed found, creating new feed")
             fg = rss_manager.create_feed()
+        else:
+            logger.info(f"[Job {job_id}] Existing feed loaded successfully")
         
+        logger.info(f"[Job {job_id}] Getting existing episode GUIDs")
         existing_guids = rss_manager.get_existing_guids(settings.rss_file)
+        logger.info(f"[Job {job_id}] Found {len(existing_guids)} existing episodes in feed")
         
-        if file_hash in existing_guids:
+        # Process each audio file (either segments or single file)
+        episodes_added = 0
+        
+        for item in audio_files_to_process:
+            # Handle both segment objects and simple dict
+            if isinstance(item, dict):
+                # Simple file (no splitting)
+                current_file = item['file']
+                part_number = None
+                total_parts = 1
+                segment_duration = item.get('duration', formatted_duration)
+            else:
+                # Segment object
+                current_file = item.file_path
+                part_number = item.part_number
+                total_parts = item.total_parts
+                segment_duration = item.formatted_duration
+            
+            # Generate unique GUID for each part
+            if part_number:
+                episode_guid = f"{file_hash}_part{part_number}"
+                episode_title = f"{title} (Part {part_number}/{total_parts})"
+            else:
+                episode_guid = file_hash
+                episode_title = title
+            
+            # Skip if already exists
+            if episode_guid in existing_guids:
+                logger.info(f"[Job {job_id}] Episode {episode_guid} already in feed, skipping")
+                continue
+            
+            # Create episode
+            audio_url = f"{settings.media_base_url}/{current_file.name}"
+            current_file_size = current_file.stat().st_size
+            mime_type = get_mime_type_from_filename(current_file.name)
+            
+            logger.info(f"[Job {job_id}] Adding episode: {episode_title}")
+            logger.info(f"[Job {job_id}]   GUID: {episode_guid}")
+            logger.info(f"[Job {job_id}]   Audio URL: {audio_url}")
+            logger.info(f"[Job {job_id}]   Duration: {segment_duration}")
+            logger.info(f"[Job {job_id}]   File size: {current_file_size / (1024 * 1024):.2f} MB")
+            
+            episode = EpisodeData(
+                guid=episode_guid,
+                title=episode_title,
+                link=settings.site_url,  # No external link for uploads
+                description=description if not part_number else f"{description} (Part {part_number}/{total_parts})",
+                audio_url=audio_url,
+                audio_file_size=current_file_size,
+                audio_mime_type=mime_type,
+                pub_date=datetime.now(timezone.utc),
+                duration=segment_duration,
+                image_url=None,  # No thumbnail for uploads
+            )
+            
+            try:
+                rss_manager.add_episode(fg, episode)
+                existing_guids.add(episode_guid)
+                episodes_added += 1
+                logger.info(f"[Job {job_id}] Episode {episode_guid} added successfully")
+            except Exception as e:
+                logger.error(f"[Job {job_id}] Failed to add episode {episode_guid}: {e}", exc_info=True)
+                raise
+        
+        if episodes_added == 0:
+            logger.warning(f"[Job {job_id}] No new episodes added (all already in feed)")
             jobs[job_id]['status'] = 'completed'
             jobs[job_id]['message'] = 'Already in feed'
             jobs[job_id]['duplicate'] = True
             return
         
-        # Add episode
-        audio_url = f"{settings.media_base_url}/{audio_file.name}"
-        mime_type = get_mime_type_from_filename(audio_file.name)
-        
-        episode = EpisodeData(
-            guid=file_hash,
-            title=title,
-            link=settings.site_url,  # No external link for uploads
-            description=description,
-            audio_url=audio_url,
-            audio_file_size=file_size,
-            audio_mime_type=mime_type,
-            pub_date=datetime.now(timezone.utc),
-            duration=None,  # Unknown for uploaded files
-            image_url=None,  # No thumbnail for uploads
-        )
-        
-        rss_manager.add_episode(fg, episode)
-        rss_manager.save_feed(fg, settings.rss_file, max_items=settings.feed_max_items)
+        logger.info(f"[Job {job_id}] Added {episodes_added} episode(s) to feed")
+        logger.info(f"[Job {job_id}] Saving RSS feed to: {settings.rss_file}")
+        try:
+            rss_manager.save_feed(fg, settings.rss_file, max_items=settings.feed_max_items)
+            logger.info(f"[Job {job_id}] RSS feed saved successfully")
+        except Exception as e:
+            logger.error(f"[Job {job_id}] Failed to save RSS feed: {e}", exc_info=True)
+            raise
         
         # Auto-publish to GitHub Pages if configured
         if settings.auto_publish == 'github':
@@ -170,42 +331,56 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
                     branch=settings.github_branch
                 )
                 
-                # Upload audio file to GitHub Releases
-                upload_success = publisher.upload_to_release(audio_file)
-                
-                if upload_success:
-                    logger.info(f"Uploaded {audio_file.name} to GitHub Releases")
+                # Upload all audio files to GitHub Releases
+                uploaded_count = 0
+                for item in audio_files_to_process:
+                    current_file = item.file_path if hasattr(item, 'file_path') else item['file']
                     
-                    # Update RSS with GitHub Releases URL
-                    jobs[job_id]['message'] = 'Updating RSS feed with GitHub URL...'
+                    jobs[job_id]['message'] = f'Uploading {current_file.name} to GitHub Releases...'
+                    upload_success = publisher.upload_to_release(current_file)
+                
+                    if upload_success:
+                        uploaded_count += 1
+                        logger.info(f"[Job {job_id}] Uploaded {current_file.name} to GitHub Releases ({uploaded_count}/{len(audio_files_to_process)})")
+                
+                if uploaded_count > 0:
+                    logger.info(f"[Job {job_id}] Uploaded {uploaded_count} file(s) to GitHub Releases")
+                    
+                    # Update RSS with GitHub Releases URLs
+                    jobs[job_id]['message'] = 'Updating RSS feed with GitHub URLs...'
                     jobs[job_id]['progress'] = {'status': 'updating_rss', 'percent': 95}
                     
-                    # Re-create episode with GitHub Releases URL
-                    github_audio_url = f"https://github.com/{settings.github_repo}/releases/download/media-files/{audio_file.name}"
+                    # Update audio URLs in RSS
+                    import xml.etree.ElementTree as ET
+                    tree = ET.parse(settings.rss_file)
+                    root = tree.getroot()
+                    channel = root.find('channel')
                     
-                    # Update the episode's audio URL
-                    fg = rss_manager.load_existing_feed(settings.rss_file)
-                    if fg:
-                        # Remove the episode we just added (with Railway URL)
-                        import xml.etree.ElementTree as ET
-                        tree = ET.parse(settings.rss_file)
-                        root = tree.getroot()
-                        channel = root.find('channel')
-                        if channel:
-                            for item in channel.findall('item'):
-                                guid_elem = item.find('guid')
-                                if guid_elem is not None and guid_elem.text == file_hash:
-                                    enclosure = item.find('enclosure')
+                    if channel:
+                        for item_elem in channel.findall('item'):
+                            guid_elem = item_elem.find('guid')
+                            if guid_elem is not None:
+                                # Check if this is one of our episodes
+                                if guid_elem.text == file_hash or guid_elem.text.startswith(f"{file_hash}_part"):
+                                    enclosure = item_elem.find('enclosure')
                                     if enclosure is not None:
-                                        enclosure.set('url', github_audio_url)
-                            tree.write(settings.rss_file, encoding='utf-8', xml_declaration=True)
+                                        # Extract filename from current URL
+                                        current_url = enclosure.get('url', '')
+                                        filename = current_url.split('/')[-1]
+                                        # Replace with GitHub Releases URL
+                                        github_url = f"https://github.com/{settings.github_repo}/releases/download/media-files/{filename}"
+                                        enclosure.set('url', github_url)
+                        
+                        tree.write(settings.rss_file, encoding='utf-8', xml_declaration=True)
+                        logger.info(f"[Job {job_id}] Updated {uploaded_count} audio URL(s) to GitHub Releases")
                     
                     # Publish RSS to GitHub Pages
                     jobs[job_id]['message'] = 'Publishing to GitHub Pages...'
                     jobs[job_id]['progress'] = {'status': 'publishing', 'percent': 98}
                     
+                    episode_title_msg = f"{title} ({episodes_added} episode{'s' if episodes_added > 1 else ''})"
                     publish_success = publisher.publish(
-                        episode_title=title,
+                        episode_title=episode_title_msg,
                         rss_file=settings.rss_file,
                         patterns=["docs/"]
                     )
@@ -230,10 +405,18 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
             jobs[job_id]['message'] = 'Upload completed successfully!'
         jobs[job_id]['progress'] = {'status': 'completed', 'percent': 100}
         
-        logger.info(f"Successfully processed uploaded file: {original_filename} (ID: {file_hash})")
+        logger.info(f"[Job {job_id}] ✅ Successfully processed uploaded file: {original_filename}")
+        logger.info(f"[Job {job_id}] Episode ID: {file_hash}")
+        logger.info(f"[Job {job_id}] Episode title: {title}")
+        logger.info(f"[Job {job_id}] Episodes created: {episodes_added}")
+        if episodes_added > 1:
+            logger.info(f"[Job {job_id}] Audio was split into {episodes_added} parts (>1 hour)")
+        logger.info(f"[Job {job_id}] Job completed successfully")
         
     except Exception as e:
-        logger.error(f"Failed to process upload: {e}", exc_info=True)
+        logger.error(f"[Job {job_id}] ❌ Failed to process upload: {e}", exc_info=True)
+        logger.error(f"[Job {job_id}] Original filename: {original_filename}")
+        logger.error(f"[Job {job_id}] File path: {file_path}")
         jobs[job_id]['status'] = 'error'
         jobs[job_id]['message'] = f'Error: {str(e)}'
         jobs[job_id]['progress'] = {'status': 'error', 'percent': 0}
@@ -541,21 +724,31 @@ def upload_file():
     """Upload and process an audio/video file."""
     global job_id_counter, jobs
     
+    logger.info("=" * 80)
+    logger.info("📤 New file upload request received")
+    
     # Check if file was uploaded
     if 'file' not in request.files:
+        logger.error("No file provided in request")
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['file']
     
     if file.filename == '':
+        logger.error("Empty filename provided")
         return jsonify({'error': 'Empty filename'}), 400
     
+    logger.info(f"Upload filename: {file.filename}")
+    
     if not allowed_file(file.filename):
+        logger.error(f"Invalid file type: {file.filename}. Allowed: {ALLOWED_EXTENSIONS}")
         return jsonify({'error': f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
     
     # Get optional metadata
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
+    
+    logger.info(f"Upload metadata - Title: {title or '(auto)'}, Description: {description or '(auto)'}")
     
     try:
         settings = get_settings()
@@ -563,11 +756,19 @@ def upload_file():
         # Create temp directory if it doesn't exist
         temp_dir = settings.podcast_dir / 'temp'
         temp_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Temp directory: {temp_dir}")
         
         # Save uploaded file temporarily
         filename = secure_filename(file.filename)
         temp_path = temp_dir / filename
+        
+        logger.info(f"Saving file to: {temp_path}")
         file.save(str(temp_path))
+        
+        # Check saved file size
+        saved_size = temp_path.stat().st_size
+        saved_size_mb = saved_size / (1024 * 1024)
+        logger.info(f"File saved successfully - Size: {saved_size_mb:.2f} MB ({saved_size} bytes)")
         
         # Create job
         with job_lock:
@@ -581,23 +782,31 @@ def upload_file():
                 'message': 'File uploaded, processing...',
                 'created_at': datetime.now().isoformat(),
             }
+            
+            logger.info(f"Created job {job_id} for file: {filename}")
         
         # Start background processing
+        logger.info(f"Starting background processing thread for job {job_id}")
         thread = threading.Thread(
             target=process_upload_job,
             args=(job_id, temp_path, filename, title or None, description or None)
         )
         thread.daemon = True
         thread.start()
+        logger.info(f"Background thread started for job {job_id}")
         
-        return jsonify({
+        response_data = {
             'job_id': job_id,
             'status': 'pending',
             'filename': filename
-        })
+        }
+        logger.info(f"Returning response: {response_data}")
+        logger.info("=" * 80)
+        
+        return jsonify(response_data)
         
     except Exception as e:
-        logger.error(f"Upload failed: {e}")
+        logger.error(f"Upload failed: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
