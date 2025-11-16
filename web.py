@@ -892,6 +892,90 @@ def get_episodes():
         return jsonify({'error': str(e), 'episodes': []}), 500
 
 
+@app.route('/api/episodes/<guid>', methods=['DELETE'])
+def delete_episode(guid):
+    """Delete an episode from the RSS feed."""
+    try:
+        logger.info(f"Delete request for episode GUID: {guid}")
+        
+        settings = get_settings()
+        
+        # Check if RSS file exists
+        if not settings.rss_file.exists():
+            logger.error("RSS file not found")
+            return jsonify({'error': 'RSS file not found'}), 404
+        
+        # Parse RSS file
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(settings.rss_file)
+        root = tree.getroot()
+        channel = root.find('channel')
+        
+        if channel is None:
+            logger.error("Invalid RSS structure - no channel found")
+            return jsonify({'error': 'Invalid RSS structure'}), 500
+        
+        # Find and remove the episode
+        episode_found = False
+        audio_filename = None
+        
+        for item in channel.findall('item'):
+            guid_elem = item.find('guid')
+            if guid_elem is not None and guid_elem.text == guid:
+                # Extract filename from audio URL before removing
+                enclosure = item.find('enclosure')
+                if enclosure is not None:
+                    audio_url = enclosure.get('url', '')
+                    audio_filename = audio_url.split('/')[-1]
+                
+                # Remove the episode from feed
+                channel.remove(item)
+                episode_found = True
+                logger.info(f"Removed episode {guid} from RSS feed")
+                break
+        
+        if not episode_found:
+            logger.warning(f"Episode {guid} not found in RSS feed")
+            return jsonify({'error': 'Episode not found'}), 404
+        
+        # Save updated RSS file
+        tree.write(settings.rss_file, encoding='utf-8', xml_declaration=True)
+        logger.info(f"Saved updated RSS feed")
+        
+        # Optionally delete the audio file from media directory
+        if audio_filename:
+            audio_file = settings.media_dir / audio_filename
+            if audio_file.exists():
+                try:
+                    audio_file.unlink()
+                    logger.info(f"Deleted audio file: {audio_file}")
+                except Exception as e:
+                    logger.warning(f"Could not delete audio file {audio_file}: {e}")
+            else:
+                logger.debug(f"Audio file not found locally: {audio_file}")
+        
+        # Also update docs/rss.xml if auto-publish is enabled
+        if settings.auto_publish == 'github':
+            docs_rss = settings.base_dir / 'docs' / 'rss.xml'
+            if docs_rss.exists():
+                try:
+                    import shutil
+                    shutil.copy2(settings.rss_file, docs_rss)
+                    logger.info(f"Updated docs/rss.xml")
+                except Exception as e:
+                    logger.warning(f"Could not update docs/rss.xml: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Episode deleted successfully',
+            'guid': guid
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to delete episode {guid}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/media/<path:filename>')
 def serve_media(filename):
     """Serve media files."""

@@ -555,6 +555,7 @@ input:focus {
     align-items: flex-start;
     gap: 12px;
     margin-bottom: 12px;
+    position: relative;
 }
 
 .episode-icon {
@@ -637,6 +638,51 @@ input:focus {
 .episode-date::before {
     content: '📅';
     font-size: 12px;
+}
+
+/* Delete Button */
+.episode-delete-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-sm);
+}
+
+.episode-delete-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: var(--text-secondary);
+    transition: all var(--transition-base);
+}
+
+.episode-item:hover .episode-delete-btn {
+    opacity: 1;
+}
+
+.episode-delete-btn:hover {
+    background: #ffebee;
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+.episode-delete-btn:hover svg {
+    stroke: #d32f2f;
+    stroke-width: 2.5;
+}
+
+.episode-delete-btn:active {
+    transform: scale(0.95);
 }
 
 /* Footer */
