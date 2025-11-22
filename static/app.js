@@ -13,6 +13,14 @@ const error = document.getElementById('error');
 const errorText = document.getElementById('errorText');
 const podcastInfo = document.getElementById('podcastInfo');
 
+// Chat elements
+const chatPanel = document.getElementById('chatPanel');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSend = document.getElementById('chatSend');
+const chatTranscriptStatus = document.getElementById('chatTranscriptStatus');
+let chatHistory = [];
+
 let currentJobId = null;
 let statusCheckInterval = null;
 
@@ -212,6 +220,13 @@ function createEpisodeItem(episode) {
     // Format date
     const date = formatDate(episode.pub_date);
     
+    const statusBadgeClass = `badge-${(episode.transcript_status || 'none')}`;
+    const statusLabel = episode.transcript_status === 'done' ? 'Транскрипт' : (
+        episode.transcript_status === 'in_progress' ? 'Транскрибируется' : (
+            episode.transcript_status === 'error' ? 'Ошибка' : 'Нет транскрипта'
+        )
+    );
+
     item.innerHTML = `
         <div class="episode-header">
             <div class="episode-icon" data-audio-url="${episode.audio_url || ''}">
@@ -224,6 +239,7 @@ function createEpisodeItem(episode) {
                 <div class="episode-meta">
                     ${episode.duration ? `<span class="episode-duration">${episode.duration}</span>` : ''}
                     ${date ? `<span class="episode-date">${date}</span>` : ''}
+                    <span class="transcript-badge ${statusBadgeClass}" title="Статус транскрипции">${statusLabel}</span>
                 </div>
             </div>
             <button class="episode-delete-btn" data-guid="${episode.guid}" title="Удалить эпизод">
@@ -581,6 +597,26 @@ function playEpisode(episode) {
         console.error('Failed to play audio:', err);
         alert('Не удалось воспроизвести аудио');
     });
+
+    // Reset chat for new episode
+    chatHistory = [];
+    chatMessages.innerHTML = '';
+    chatInput.disabled = false;
+    updateChatTranscriptStatus('—', '');
+
+    // Ensure transcription started
+    if (episode.guid && episode.audio_url) {
+        fetch('/api/transcripts/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guid: episode.guid, audio_url: episode.audio_url })
+        })
+        .then(res => res.json())
+        .then(() => {
+            pollTranscriptStatus(episode.guid);
+        })
+        .catch(() => {});
+    }
 }
 
 // Delete episode function
@@ -646,4 +682,83 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         audioElement.currentTime = Math.min(audioElement.duration, audioElement.currentTime + 10);
     }
+});
+
+// ===== CHAT LOGIC =====
+function appendChatMessage(role, content) {
+    const div = document.createElement('div');
+    div.className = `msg msg-${role}`;
+    div.textContent = content;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function updateChatTranscriptStatus(text, statusClass) {
+    chatTranscriptStatus.textContent = text;
+    chatTranscriptStatus.classList.remove('status-none', 'status-in_progress', 'status-done', 'status-error');
+    if (statusClass) chatTranscriptStatus.classList.add(statusClass);
+}
+
+function pollTranscriptStatus(guid) {
+    if (!guid) return;
+    fetch(`/api/transcripts/status/${guid}`)
+        .then(res => res.json())
+        .then(data => {
+            const st = data.status || 'none';
+            if (st === 'done') updateChatTranscriptStatus('Готово', 'status-done');
+            else if (st === 'in_progress') updateChatTranscriptStatus('В процессе', 'status-in_progress');
+            else if (st === 'error') updateChatTranscriptStatus('Ошибка', 'status-error');
+            else updateChatTranscriptStatus('Нет', 'status-none');
+
+            if (st === 'in_progress') {
+                setTimeout(() => pollTranscriptStatus(guid), 5000);
+            }
+        })
+        .catch(() => {});
+}
+
+function sendChat() {
+    if (!currentEpisode || !currentEpisode.guid) {
+        appendChatMessage('assistant', 'Сначала запустите воспроизведение эпизода.');
+        return;
+    }
+    const text = chatInput.value.trim();
+    if (!text) return;
+    chatInput.value = '';
+    chatInput.disabled = true;
+    appendChatMessage('user', text);
+
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            guid: currentEpisode.guid,
+            message: text,
+            history: chatHistory
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            appendChatMessage('assistant', 'Ошибка чата: ' + (data.details?.message || data.error));
+            return;
+        }
+        const reply = data.reply || '...';
+        appendChatMessage('assistant', reply);
+        // update history
+        chatHistory.push({ role: 'user', content: text });
+        chatHistory.push({ role: 'assistant', content: reply });
+    })
+    .catch(err => {
+        appendChatMessage('assistant', 'Ошибка сети: ' + err.message);
+    })
+    .finally(() => {
+        chatInput.disabled = false;
+        chatInput.focus();
+    });
+}
+
+chatSend.addEventListener('click', () => sendChat());
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChat();
 });

@@ -21,6 +21,7 @@ from utils.downloader import AudioDownloader
 from utils.rss_manager import RSSManager, EpisodeData, get_mime_type_from_filename
 from utils.github_publisher import GitHubPublisher
 from utils.audio_splitter import AudioSplitter
+from utils.transcript_manager import TranscriptManager
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -35,6 +36,23 @@ logger = setup_logger("web")
 jobs = {}
 job_id_counter = 0
 job_lock = threading.Lock()
+
+# Transcription manager (lazy init to avoid early config issues)
+_transcript_manager = None
+
+
+def get_transcript_manager() -> TranscriptManager:
+    global _transcript_manager
+    if _transcript_manager is None:
+        settings = get_settings()
+        tm = TranscriptManager(settings.podcast_dir, api_key=settings.assemblyai_api_key)
+        _set_transcript_manager(tm)
+    return _transcript_manager
+
+
+def _set_transcript_manager(tm: TranscriptManager):
+    global _transcript_manager
+    _transcript_manager = tm
 
 
 def allowed_file(filename):
@@ -840,6 +858,7 @@ def get_episodes():
     """Get list of episodes from RSS feed."""
     try:
         settings = get_settings()
+        tm = get_transcript_manager()
         
         # Check if RSS file exists
         if not settings.rss_file.exists():
@@ -879,7 +898,16 @@ def get_episodes():
                         episode['audio_url'] = enclosure_elem.get('url', '')
                         episode['file_size'] = enclosure_elem.get('length', '0')
                         episode['mime_type'] = enclosure_elem.get('type', '')
+                        # convenience for clients
+                        if 'audio_url' in episode and episode['audio_url']:
+                            episode['audio_filename'] = episode['audio_url'].split('/')[-1]
                     
+                    # Attach transcript status
+                    if episode['guid']:
+                        episode['transcript_status'] = tm.get_status(episode['guid']).status
+                    else:
+                        episode['transcript_status'] = 'none'
+
                     episodes.append(episode)
             
             return jsonify({
@@ -976,6 +1004,126 @@ def delete_episode(guid):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/transcripts/start', methods=['POST'])
+def start_transcription():
+    try:
+        payload = request.get_json(force=True)
+        guid = (payload.get('guid') or '').strip()
+        audio_url = (payload.get('audio_url') or '').strip()
+        if not guid or not audio_url:
+            return jsonify({'error': 'guid and audio_url are required'}), 400
+
+        settings = get_settings()
+        tm = get_transcript_manager()
+        # ensure API key up-to-date
+        tm.set_api_key(settings.assemblyai_api_key)
+        started = tm.start_transcription_background(guid, audio_url, local_media_dir=settings.media_dir)
+        status = tm.get_status(guid).status
+        return jsonify({'started': started, 'status': status})
+    except Exception as e:
+        logger.error(f"Failed to start transcription: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/transcripts/status/<guid>')
+def transcript_status(guid):
+    try:
+        tm = get_transcript_manager()
+        st = tm.get_status(guid)
+        return jsonify({'guid': guid, 'status': st.status, 'error': st.error})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/transcripts/text/<guid>')
+def transcript_text(guid):
+    try:
+        tm = get_transcript_manager()
+        if not tm.has_transcript(guid):
+            return jsonify({'guid': guid, 'available': False, 'text': ''}), 404
+        excerpt = tm.read_transcript_excerpt(guid, max_chars=12000) or ''
+        return jsonify({'guid': guid, 'available': True, 'text': excerpt})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_episode():
+    try:
+        from config import get_settings
+        settings = get_settings()
+        data = request.get_json(force=True)
+        message = (data.get('message') or '').strip()
+        guid = (data.get('guid') or '').strip()
+        history = data.get('history') or []  # optional [{role, content}]
+
+        if not message:
+            return jsonify({'error': 'message is required'}), 400
+        if not settings.openai_api_key:
+            return jsonify({'error': 'OPENAI_API_KEY is not configured on server'}), 500
+
+        transcript_context = ''
+        title = ''
+        duration = ''
+        link = ''
+        audio_url = ''
+
+        # Try to enrich with episode details from RSS
+        if guid:
+            try:
+                # quick lookup from episodes endpoint data
+                tm = get_transcript_manager()
+                excerpt = tm.read_transcript_excerpt(guid, max_chars=6000)
+                if excerpt:
+                    transcript_context = excerpt
+            except Exception:
+                pass
+
+        # Compose messages for OpenAI
+        sys_prompt = (
+            "Вы — дружелюбный помощник в стиле ChatGPT. Обсуждайте текущий эпизод подкаста, "
+            "отвечайте кратко и по делу, ссылаясь на содержание эпизода. Если транскрипт неполный или отсутствует, "
+            "отвечайте в общем ключе и уточняйте, что транскрипция ещё недоступна полностью."
+        )
+
+        messages = [{"role": "system", "content": sys_prompt}]
+        if transcript_context:
+            messages.append({
+                "role": "system",
+                "content": f"Краткий контекст эпизода (фрагмент транскрипта):\n{transcript_context}"
+            })
+        # add history if provided
+        for h in history:
+            if isinstance(h, dict) and h.get('role') in ('user', 'assistant') and isinstance(h.get('content'), str):
+                messages.append({"role": h['role'], "content": h['content']})
+        messages.append({"role": "user", "content": message})
+
+        # Call OpenAI Chat Completions API via requests
+        import requests
+        headers = {
+            'Authorization': f"Bearer {settings.openai_api_key}",
+            'Content-Type': 'application/json',
+        }
+        payload = {
+            'model': settings.openai_model,
+            'messages': messages,
+            'temperature': 0.3,
+        }
+        resp = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=payload, timeout=60)
+        if resp.status_code >= 400:
+            try:
+                err = resp.json()
+            except Exception:
+                err = {'message': resp.text}
+            return jsonify({'error': 'LLM API error', 'details': err}), resp.status_code
+        data = resp.json()
+        reply = (data.get('choices') or [{}])[0].get('message', {}).get('content', '').strip()
+        return jsonify({'reply': reply})
+    except Exception as e:
+        logger.error(f"Chat error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/media/<path:filename>')
 def serve_media(filename):
     """Serve media files."""
@@ -992,6 +1140,8 @@ def proxy_audio():
     """Proxy audio files from GitHub Releases to avoid CORS issues."""
     import requests
     from flask import Response, stream_with_context
+    from urllib.parse import urlparse, unquote
+    import os
     
     url = request.args.get('url')
     if not url:
@@ -1001,30 +1151,58 @@ def proxy_audio():
     if not url.startswith('https://github.com/'):
         return jsonify({'error': 'Only GitHub URLs allowed'}), 403
     
+    def _fallback_local():
+        """Serve the file from local media dir if it exists."""
+        try:
+            settings = get_settings()
+            parsed = urlparse(url)
+            filename = unquote(os.path.basename(parsed.path))
+            if filename:
+                local_path = settings.media_dir / filename
+                if local_path.exists():
+                    logger.info(f"Proxy fallback to local media for {filename}")
+                    return send_from_directory(settings.media_dir, filename)
+        except Exception as fe:
+            logger.debug(f"Local proxy fallback failed: {fe}")
+        return None
+
     try:
         # Stream the file from GitHub
         resp = requests.get(url, stream=True, timeout=30)
-        resp.raise_for_status()
-        
-        # Get content type from remote response
-        content_type = resp.headers.get('Content-Type', 'audio/mpeg')
-        
-        def generate():
-            for chunk in resp.iter_content(chunk_size=8192):
-                if chunk:
-                    yield chunk
-        
-        response = Response(stream_with_context(generate()), content_type=content_type)
-        response.headers['Accept-Ranges'] = 'bytes'
-        response.headers['Cache-Control'] = 'public, max-age=31536000'
-        
-        # Copy content-length if available
-        if 'Content-Length' in resp.headers:
-            response.headers['Content-Length'] = resp.headers['Content-Length']
-        
-        return response
-        
+        if resp.status_code == 200:
+            # Get content type from remote response
+            content_type = resp.headers.get('Content-Type', 'audio/mpeg')
+
+            def generate():
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
+
+            response = Response(stream_with_context(generate()), content_type=content_type)
+            response.headers['Accept-Ranges'] = 'bytes'
+            response.headers['Cache-Control'] = 'public, max-age=31536000'
+
+            # Copy content-length if available
+            if 'Content-Length' in resp.headers:
+                response.headers['Content-Length'] = resp.headers['Content-Length']
+
+            return response
+
+        # Non-200 from GitHub — try local fallback for 404 or other errors
+        logger.warning(f"Remote audio returned {resp.status_code} for {url}")
+        local_resp = _fallback_local()
+        if local_resp is not None:
+            return local_resp
+        # If no local file, propagate meaningful status
+        return jsonify({'error': 'Audio not found' if resp.status_code == 404 else 'Failed to fetch audio file'}), (
+            404 if resp.status_code == 404 else 502
+        )
+
     except requests.RequestException as e:
+        # Network/error talking to GitHub — try local fallback
+        local_resp = _fallback_local()
+        if local_resp is not None:
+            return local_resp
         logger.error(f"Failed to proxy audio from {url}: {e}")
         return jsonify({'error': 'Failed to fetch audio file'}), 502
 

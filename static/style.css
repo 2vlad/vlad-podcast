@@ -695,6 +695,116 @@ input:focus {
     opacity: 0.8;
 }
 
+/* ===== CHAT PANEL (Fixed Right) ===== */
+.chat-panel {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    bottom: 96px; /* leave room for audio player */
+    width: 360px;
+    max-height: calc(100vh - 112px);
+    background: var(--bg-primary);
+    border: 1.5px solid var(--border-secondary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 900;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-secondary);
+    background: var(--bg-secondary);
+}
+
+.chat-title {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.chat-status {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 9999px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-secondary);
+}
+.chat-status.status-none { color: #9e9e9e; }
+.chat-status.status-in_progress { color: #d48806; }
+.chat-status.status-done { color: #00c762; }
+.chat-status.status-error { color: #ff3b30; }
+
+.chat-messages {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.msg {
+    max-width: 85%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    line-height: 1.4;
+    font-size: 14px;
+    box-shadow: var(--shadow-sm);
+    white-space: pre-wrap;
+}
+.msg-user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #fff;
+}
+.msg-assistant {
+    align-self: flex-start;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.chat-input {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid var(--border-secondary);
+    background: var(--bg-primary);
+}
+.chat-input input {
+    height: 44px;
+}
+.chat-input .btn-primary {
+    width: 44px;
+    height: 44px;
+}
+
+/* Hide chat on small screens */
+@media (max-width: 1024px) {
+    .chat-panel { display: none; }
+}
+
+/* Transcript status badge in episode list */
+.transcript-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-secondary);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+.transcript-badge.badge-none { color: #9e9e9e; }
+.transcript-badge.badge-in_progress { color: #d48806; }
+.transcript-badge.badge-done { color: #00c762; }
+.transcript-badge.badge-error { color: #ff3b30; }
+
 /* Animations */
 @keyframes fadeIn {
     from {

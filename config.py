@@ -61,6 +61,17 @@ class Settings:
     podcast_image: Optional[str] = field(
         default_factory=lambda: config('PODCAST_IMAGE', default=None)
     )
+
+    # AI/LLM/Transcription settings (optional)
+    assemblyai_api_key: Optional[str] = field(
+        default_factory=lambda: config('ASSEMBLYAI_API_KEY', default=None)
+    )
+    openai_api_key: Optional[str] = field(
+        default_factory=lambda: config('OPENAI_API_KEY', default=None)
+    )
+    openai_model: str = field(
+        default_factory=lambda: config('OPENAI_MODEL', default='gpt-4o-mini', cast=str)
+    )
     
     # Auto-publish settings
     auto_publish: str = field(
@@ -105,6 +116,11 @@ class Settings:
     def rss_file(self) -> Path:
         """RSS feed file path."""
         return self.podcast_dir / "rss.xml"
+
+    @property
+    def transcripts_dir(self) -> Path:
+        """Transcripts output directory."""
+        return self.podcast_dir / "transcripts"
     
     def __post_init__(self):
         """Validate settings after initialization."""
@@ -158,6 +174,8 @@ class Settings:
         # Create temp directory for file uploads
         temp_dir = self.podcast_dir / 'temp'
         temp_dir.mkdir(exist_ok=True)
+        # Create transcripts directory
+        self.transcripts_dir.mkdir(exist_ok=True)
     
     @property
     def yt_dlp_options(self) -> dict:
