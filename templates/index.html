@@ -185,9 +185,18 @@
 
     <!-- Chat Panel (Fixed Right) -->
     <div class="chat-panel" id="chatPanel">
-        <div class="chat-header">
-            <div class="chat-title">Чат об эпизоде</div>
-            <div class="chat-status" id="chatTranscriptStatus" title="Статус транскрипции">—</div>
+        <div class="chat-header" id="chatHeader">
+            <div class="chat-header-left">
+                <div class="chat-title">Чат об эпизоде</div>
+                <div class="chat-status" id="chatTranscriptStatus" title="Статус транскрипции">—</div>
+            </div>
+            <div class="chat-header-controls">
+                <button class="chat-collapse-btn" id="chatCollapseBtn" title="Свернуть/Развернуть">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="18 15 12 9 6 15"/>
+                    </svg>
+                </button>
+            </div>
         </div>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input">

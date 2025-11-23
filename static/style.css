@@ -760,9 +760,12 @@ input:focus {
     position: fixed;
     top: 16px;
     right: 16px;
-    bottom: 96px; /* leave room for audio player */
     width: 360px;
-    max-height: calc(100vh - 112px);
+    height: calc(100vh - 112px);
+    min-width: 280px;
+    min-height: 200px;
+    max-width: 600px;
+    max-height: calc(100vh - 50px);
     background: var(--bg-primary);
     border: 1.5px solid var(--border-secondary);
     border-radius: var(--radius-lg);
@@ -771,6 +774,25 @@ input:focus {
     flex-direction: column;
     overflow: hidden;
     z-index: 900;
+    resize: both;
+    transition: height 0.3s ease, box-shadow 0.2s ease;
+}
+
+.chat-panel.collapsed {
+    height: 48px !important;
+    min-height: 48px;
+    resize: none;
+}
+
+.chat-panel.collapsed .chat-messages,
+.chat-panel.collapsed .chat-input {
+    display: none;
+}
+
+.chat-panel.dragging {
+    opacity: 0.9;
+    box-shadow: var(--shadow-xl), 0 0 0 2px var(--accent);
+    transition: none;
 }
 
 .chat-header {
@@ -780,11 +802,56 @@ input:focus {
     padding: 12px 14px;
     border-bottom: 1px solid var(--border-secondary);
     background: var(--bg-secondary);
+    cursor: move;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .chat-title {
     font-weight: 700;
     font-size: 14px;
+}
+
+.chat-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chat-collapse-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    opacity: 0.6;
+}
+
+.chat-collapse-btn:hover {
+    opacity: 1;
+    background: var(--bg-primary);
+}
+
+.chat-collapse-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--text-primary);
+    transition: transform 0.3s ease;
+}
+
+.chat-panel.collapsed .chat-collapse-btn svg {
+    transform: rotate(180deg);
 }
 
 .chat-status {

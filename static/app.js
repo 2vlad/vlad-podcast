@@ -927,3 +927,77 @@ chatSend.addEventListener('click', () => sendChat());
 chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendChat();
 });
+
+// ===== CHAT PANEL DRAG & COLLAPSE =====
+const chatHeader = document.getElementById('chatHeader');
+const chatCollapseBtn = document.getElementById('chatCollapseBtn');
+
+// Collapse/Expand
+chatCollapseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    chatPanel.classList.toggle('collapsed');
+});
+
+// Drag functionality
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+chatHeader.addEventListener('mousedown', (e) => {
+    // Don't drag if clicking on controls
+    if (e.target.closest('.chat-header-controls')) return;
+    
+    isDragging = true;
+    chatPanel.classList.add('dragging');
+    
+    const rect = chatPanel.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    let newX = e.clientX - dragOffsetX;
+    let newY = e.clientY - dragOffsetY;
+    
+    // Constrain to viewport
+    const panelWidth = chatPanel.offsetWidth;
+    const panelHeight = chatPanel.offsetHeight;
+    const maxX = window.innerWidth - panelWidth;
+    const maxY = window.innerHeight - panelHeight;
+    
+    newX = Math.max(0, Math.min(newX, maxX));
+    newY = Math.max(0, Math.min(newY, maxY));
+    
+    chatPanel.style.left = newX + 'px';
+    chatPanel.style.top = newY + 'px';
+    chatPanel.style.right = 'auto';
+    chatPanel.style.bottom = 'auto';
+});
+
+document.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        chatPanel.classList.remove('dragging');
+    }
+});
+
+// Prevent text selection while dragging
+chatHeader.addEventListener('selectstart', (e) => {
+    if (isDragging) e.preventDefault();
+});
+
+// Double-click to reset position
+chatHeader.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.chat-header-controls')) return;
+    
+    chatPanel.style.left = 'auto';
+    chatPanel.style.top = '16px';
+    chatPanel.style.right = '16px';
+    chatPanel.style.bottom = 'auto';
+    chatPanel.style.width = '360px';
+    chatPanel.style.height = 'calc(100vh - 112px)';
+});
