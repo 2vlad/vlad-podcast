@@ -805,6 +805,17 @@ input:focus {
 .transcript-badge.badge-done { color: #00c762; }
 .transcript-badge.badge-error { color: #ff3b30; }
 
+.transcript-badge.clickable {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.transcript-badge.clickable:hover {
+    background: var(--accent);
+    color: #fff !important;
+    border-color: var(--accent);
+    transform: scale(1.05);
+}
+
 /* Animations */
 @keyframes fadeIn {
     from {

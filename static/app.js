@@ -220,12 +220,14 @@ function createEpisodeItem(episode) {
     // Format date
     const date = formatDate(episode.pub_date);
     
-    const statusBadgeClass = `badge-${(episode.transcript_status || 'none')}`;
-    const statusLabel = episode.transcript_status === 'done' ? 'Транскрипт' : (
-        episode.transcript_status === 'in_progress' ? 'Транскрибируется' : (
-            episode.transcript_status === 'error' ? 'Ошибка' : 'Нет транскрипта'
+    const transcriptStatus = episode.transcript_status || 'none';
+    const statusBadgeClass = `badge-${transcriptStatus}`;
+    const statusLabel = transcriptStatus === 'done' ? '✓ Транскрипт' : (
+        transcriptStatus === 'in_progress' ? '⏳ Транскрибируется' : (
+            transcriptStatus === 'error' ? '✗ Ошибка' : '+ Транскрибировать'
         )
     );
+    const isClickable = transcriptStatus === 'none' || transcriptStatus === 'error';
 
     item.innerHTML = `
         <div class="episode-header">
@@ -239,7 +241,10 @@ function createEpisodeItem(episode) {
                 <div class="episode-meta">
                     ${episode.duration ? `<span class="episode-duration">${episode.duration}</span>` : ''}
                     ${date ? `<span class="episode-date">${date}</span>` : ''}
-                    <span class="transcript-badge ${statusBadgeClass}" title="Статус транскрипции">${statusLabel}</span>
+                    <span class="transcript-badge ${statusBadgeClass} ${isClickable ? 'clickable' : ''}" 
+                          data-guid="${episode.guid}" 
+                          data-audio-url="${episode.audio_url || ''}"
+                          title="${isClickable ? 'Нажмите для транскрибации' : 'Статус транскрипции'}">${statusLabel}</span>
                 </div>
             </div>
             <button class="episode-delete-btn" data-guid="${episode.guid}" title="Удалить эпизод">
@@ -285,7 +290,89 @@ function createEpisodeItem(episode) {
         deleteEpisode(episode.guid, episode.title);
     });
     
+    // Add click handler to transcript badge (start transcription)
+    const transcriptBadge = item.querySelector('.transcript-badge');
+    if (transcriptBadge && transcriptBadge.classList.contains('clickable')) {
+        transcriptBadge.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startTranscriptionFromBadge(transcriptBadge, episode.guid, episode.audio_url);
+        });
+    }
+    
     return item;
+}
+
+// Start transcription when clicking badge
+function startTranscriptionFromBadge(badgeEl, guid, audioUrl) {
+    if (!guid || !audioUrl) {
+        alert('Не удалось получить данные эпизода');
+        return;
+    }
+    
+    // Update badge to show loading
+    badgeEl.textContent = '⏳ Запуск...';
+    badgeEl.classList.remove('badge-none', 'badge-error', 'clickable');
+    badgeEl.classList.add('badge-in_progress');
+    badgeEl.title = 'Транскрибация запускается...';
+    
+    fetch('/api/transcripts/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guid: guid, audio_url: audioUrl })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            badgeEl.textContent = '✗ Ошибка';
+            badgeEl.classList.remove('badge-in_progress');
+            badgeEl.classList.add('badge-error', 'clickable');
+            badgeEl.title = data.error;
+            return;
+        }
+        
+        badgeEl.textContent = '⏳ Транскрибируется';
+        badgeEl.title = 'Транскрибация в процессе...';
+        
+        // Start polling for this specific badge
+        pollBadgeStatus(badgeEl, guid);
+    })
+    .catch(err => {
+        badgeEl.textContent = '✗ Ошибка';
+        badgeEl.classList.remove('badge-in_progress');
+        badgeEl.classList.add('badge-error', 'clickable');
+        badgeEl.title = err.message;
+    });
+}
+
+// Poll transcript status and update badge
+function pollBadgeStatus(badgeEl, guid) {
+    fetch(`/api/transcripts/status/${guid}`)
+        .then(res => res.json())
+        .then(data => {
+            const st = data.status || 'none';
+            
+            if (st === 'done') {
+                badgeEl.textContent = '✓ Транскрипт';
+                badgeEl.classList.remove('badge-in_progress', 'badge-none', 'badge-error', 'clickable');
+                badgeEl.classList.add('badge-done');
+                badgeEl.title = 'Транскрипция готова';
+            } else if (st === 'in_progress') {
+                badgeEl.textContent = '⏳ Транскрибируется';
+                badgeEl.title = 'Транскрибация в процессе...';
+                // Continue polling
+                setTimeout(() => pollBadgeStatus(badgeEl, guid), 5000);
+            } else if (st === 'error') {
+                badgeEl.textContent = '✗ Ошибка';
+                badgeEl.classList.remove('badge-in_progress');
+                badgeEl.classList.add('badge-error', 'clickable');
+                badgeEl.title = data.error || 'Ошибка транскрибации';
+            }
+        })
+        .catch(() => {
+            // On error, keep polling
+            setTimeout(() => pollBadgeStatus(badgeEl, guid), 5000);
+        });
 }
 
 function formatDate(dateString) {
