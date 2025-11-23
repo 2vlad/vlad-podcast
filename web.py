@@ -309,7 +309,7 @@ def process_upload_job(job_id: int, file_path: Path, original_filename: str, tit
                 audio_file_size=current_file_size,
                 audio_mime_type=mime_type,
                 pub_date=datetime.now(timezone.utc),
-                duration=segment_duration,
+                duration=segment_duration or formatted_duration,  # Fallback to ensure duration is always set
                 image_url=None,  # No thumbnail for uploads
             )
             

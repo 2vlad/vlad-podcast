@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from config import get_settings
 from utils.rss_manager import RSSManager, EpisodeData
+from utils.audio_splitter import AudioSplitter
 import logging
 
 logging.basicConfig(
@@ -103,6 +104,9 @@ def main():
         print(f"✍️  Creating new feed...")
         fg = rss_manager.create_feed()
         
+        # Initialize audio splitter for duration extraction
+        splitter = AudioSplitter()
+        
         # Add episodes back
         for ep in existing_episodes:
             print(f"   Adding: {ep['title']}")
@@ -111,6 +115,20 @@ def main():
             file_size = ep['media_file'].stat().st_size
             mime_type = "audio/mp4" if settings.audio_format == "m4a" else "audio/mpeg"
             audio_url = f"{settings.media_base_url}/{ep['media_file'].name}"
+            
+            # Extract duration from audio file if missing or invalid
+            duration = ep['duration']
+            if not duration or duration == '00:00':
+                try:
+                    audio_duration = splitter.get_audio_duration(ep['media_file'])
+                    hours = audio_duration // 3600
+                    minutes = (audio_duration % 3600) // 60
+                    seconds = audio_duration % 60
+                    duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}" if hours > 0 else f"{minutes:02d}:{seconds:02d}"
+                    print(f"      Extracted duration: {duration}")
+                except Exception as e:
+                    print(f"      Warning: Could not extract duration: {e}")
+                    duration = '00:00'
             
             # Create episode data
             episode = EpisodeData(
@@ -122,7 +140,7 @@ def main():
                 audio_file_size=file_size,
                 audio_mime_type=mime_type,
                 pub_date=ep['pub_date'],
-                duration=ep['duration'],
+                duration=duration,
                 image_url=ep['thumbnail_url'],
             )
             
