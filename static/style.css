@@ -304,14 +304,74 @@ input:focus {
     }
 }
 
+.status-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
 .status-text {
     font-size: 19px;
     font-weight: 600;
     color: var(--text-primary);
     letter-spacing: -0.02em;
-    margin-bottom: 24px;
     animation: fadeIn var(--transition-base), pulse 2s ease-in-out infinite;
     line-height: 1.4;
+}
+
+/* Progress Stages */
+.progress-stages {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-secondary);
+}
+
+.stage {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-tertiary);
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.stage.completed {
+    color: var(--text-secondary);
+}
+
+.stage.completed .stage-icon {
+    color: #00c762;
+}
+
+.stage.current {
+    color: var(--text-primary);
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.stage.current .stage-icon {
+    color: #007aff;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.stage.skipped {
+    color: var(--text-tertiary);
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+.stage-icon {
+    font-size: 12px;
+    width: 16px;
+    text-align: center;
 }
 
 /* Progress Bar */

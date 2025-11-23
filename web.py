@@ -1007,18 +1007,39 @@ def delete_episode(guid):
 @app.route('/api/transcripts/start', methods=['POST'])
 def start_transcription():
     try:
+        logger.info("=" * 60)
+        logger.info("📝 Transcription start request received")
+        
         payload = request.get_json(force=True)
         guid = (payload.get('guid') or '').strip()
         audio_url = (payload.get('audio_url') or '').strip()
+        
+        logger.info(f"GUID: {guid}")
+        logger.info(f"Audio URL: {audio_url}")
+        
         if not guid or not audio_url:
+            logger.error("Missing guid or audio_url")
             return jsonify({'error': 'guid and audio_url are required'}), 400
 
         settings = get_settings()
+        logger.info(f"AssemblyAI API key configured: {bool(settings.assemblyai_api_key)}")
+        logger.info(f"Media dir: {settings.media_dir}")
+        
+        if not settings.assemblyai_api_key:
+            logger.error("ASSEMBLYAI_API_KEY not set in .env!")
+            return jsonify({'error': 'ASSEMBLYAI_API_KEY not configured on server'}), 500
+        
         tm = get_transcript_manager()
         # ensure API key up-to-date
         tm.set_api_key(settings.assemblyai_api_key)
+        
+        logger.info("Calling start_transcription_background...")
         started = tm.start_transcription_background(guid, audio_url, local_media_dir=settings.media_dir)
         status = tm.get_status(guid).status
+        
+        logger.info(f"Started: {started}, Status: {status}")
+        logger.info("=" * 60)
+        
         return jsonify({'started': started, 'status': status})
     except Exception as e:
         logger.error(f"Failed to start transcription: {e}", exc_info=True)

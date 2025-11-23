@@ -66,13 +66,27 @@
 
             <!-- Status Area -->
             <div class="status" id="status" style="display: none;">
-                <div class="status-icon" id="statusIcon">
-                    <!-- Loading spinner -->
-                    <svg class="spinner" viewBox="0 0 50 50">
-                        <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"></circle>
-                    </svg>
+                <div class="status-header">
+                    <div class="status-icon" id="statusIcon">
+                        <!-- Loading spinner -->
+                        <svg class="spinner" viewBox="0 0 50 50">
+                            <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"></circle>
+                        </svg>
+                    </div>
+                    <div class="status-text" id="statusText"></div>
                 </div>
-                <div class="status-text" id="statusText"></div>
+                
+                <!-- Progress Stages -->
+                <div class="progress-stages" id="progressStages">
+                    <div class="stage" data-stage="upload"><span class="stage-icon">○</span> Загрузка файла</div>
+                    <div class="stage" data-stage="processing"><span class="stage-icon">○</span> Обработка</div>
+                    <div class="stage" data-stage="converting"><span class="stage-icon">○</span> Конвертация</div>
+                    <div class="stage" data-stage="metadata"><span class="stage-icon">○</span> Анализ</div>
+                    <div class="stage" data-stage="splitting"><span class="stage-icon">○</span> Разбивка на части</div>
+                    <div class="stage" data-stage="uploading"><span class="stage-icon">○</span> Загрузка на GitHub</div>
+                    <div class="stage" data-stage="updating_rss"><span class="stage-icon">○</span> Обновление RSS</div>
+                    <div class="stage" data-stage="publishing"><span class="stage-icon">○</span> Публикация</div>
+                </div>
                 
                 <!-- Progress Bar -->
                 <div class="progress-bar" id="progressBar" style="display: none;">

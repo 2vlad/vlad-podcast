@@ -24,6 +24,25 @@ let chatHistory = [];
 let currentJobId = null;
 let statusCheckInterval = null;
 
+// Stage definitions for upload and YouTube processing
+const uploadStages = ['upload', 'processing', 'converting', 'metadata', 'splitting', 'uploading', 'updating_rss', 'publishing'];
+const youtubeStages = ['starting', 'downloading', 'processing', 'splitting', 'feed', 'uploading', 'updating_rss', 'publishing'];
+
+// Map backend status to stage name
+const stageMapping = {
+    'starting': 'starting',
+    'downloading': 'downloading',
+    'processing': 'processing',
+    'converting': 'converting',
+    'metadata': 'metadata',
+    'splitting': 'splitting',
+    'feed': 'uploading',
+    'uploading': 'uploading',
+    'updating_rss': 'updating_rss',
+    'publishing': 'publishing',
+    'completed': 'completed'
+};
+
 // Load config on page load
 fetch('/api/config')
     .then(res => res.json())
@@ -69,7 +88,7 @@ function submitUrl() {
         }
 
         currentJobId = data.job_id;
-        showStatus('Обработка...');
+        showStatus('Обработка...', 'starting');
         startStatusCheck();
     })
     .catch(err => {
@@ -139,9 +158,62 @@ function updateProgressBar(progressData) {
         progressFill.style.width = `${progressData.percent}%`;
         progressPercent.textContent = `${Math.round(progressData.percent)}%`;
     }
+    
+    // Update stages display
+    if (progressData.status) {
+        updateStages(progressData.status, progressData.skipped || []);
+    }
 }
 
-function showStatus(message) {
+function updateStages(currentStatus, skippedStages = []) {
+    const stagesContainer = document.getElementById('progressStages');
+    if (!stagesContainer) return;
+    
+    const stages = stagesContainer.querySelectorAll('.stage');
+    const mappedStatus = stageMapping[currentStatus] || currentStatus;
+    
+    let foundCurrent = false;
+    
+    stages.forEach(stage => {
+        const stageName = stage.dataset.stage;
+        const icon = stage.querySelector('.stage-icon');
+        
+        // Remove all status classes
+        stage.classList.remove('completed', 'current', 'skipped');
+        
+        if (skippedStages.includes(stageName)) {
+            // This stage was skipped
+            stage.classList.add('skipped');
+            icon.textContent = '–';
+        } else if (stageName === mappedStatus) {
+            // Current stage
+            stage.classList.add('current');
+            icon.textContent = '●';
+            foundCurrent = true;
+        } else if (!foundCurrent) {
+            // Completed stage (before current)
+            stage.classList.add('completed');
+            icon.textContent = '✓';
+        } else {
+            // Pending stage (after current)
+            icon.textContent = '○';
+        }
+    });
+}
+
+function resetStages() {
+    const stagesContainer = document.getElementById('progressStages');
+    if (!stagesContainer) return;
+    
+    const stages = stagesContainer.querySelectorAll('.stage');
+    stages.forEach(stage => {
+        stage.classList.remove('completed', 'current', 'skipped');
+        const icon = stage.querySelector('.stage-icon');
+        icon.textContent = '○';
+    });
+}
+
+function showStatus(message, initialStage = null) {
     hideAll();
     status.style.display = 'block';
     statusText.textContent = message;
@@ -150,6 +222,12 @@ function showStatus(message) {
     const progressBar = document.getElementById('progressBar');
     if (progressBar) {
         progressBar.style.display = 'none';
+    }
+    
+    // Reset and optionally set initial stage
+    resetStages();
+    if (initialStage) {
+        updateStages(initialStage, []);
     }
 }
 
@@ -532,8 +610,8 @@ uploadBtn.addEventListener('click', () => {
     inputGroup.classList.add('processing');
     uploadBtn.disabled = true;
     
-    // Show loading status
-    showStatus('Загрузка файла...');
+    // Show loading status with upload stage
+    showStatus('Загрузка файла...', 'upload');
     
     // Create FormData
     const formData = new FormData();
