@@ -13,19 +13,21 @@ logger = logging.getLogger("github_publisher")
 
 class GitHubPublisher:
     """Automatically publish podcast files to GitHub Pages."""
-    
+
     def __init__(self, repo_path: Path, branch: str = "main", docs_dir: Optional[Path] = None):
         """
         Initialize GitHub publisher.
-        
+
         Args:
-            repo_path: Path to git repository
+            repo_path: Path to git repository (used for source files like rss.xml)
             branch: Git branch to push to (default: main)
             docs_dir: Path to docs directory (default: repo_path/docs)
         """
         self.repo_path = Path(repo_path)
         self.branch = branch
         self.docs_dir = docs_dir or (self.repo_path / "docs")
+        # Use a separate directory for git operations to avoid conflicts with deployed files
+        self.git_work_dir = Path("/tmp/github_publish_repo")
         self._init_auth()
         self._ensure_git_repo()
         
@@ -54,55 +56,71 @@ class GitHubPublisher:
             logger.error(f"Auth setup failed: {e}")
     
     def _ensure_git_repo(self):
-        """Ensure the directory is a git repository, initialize if needed."""
-        git_dir = self.repo_path / '.git'
-        
+        """Ensure the git working directory is set up for publishing."""
+        import shutil
+
+        git_dir = self.git_work_dir / '.git'
+        remote_url = 'https://github.com/2vlad/vlad-podcast.git'
+
+        # If git repo exists and is valid, just pull latest
         if git_dir.exists():
-            logger.info("Git repository already initialized")
-            return
-        
+            try:
+                logger.info(f"Git repository exists at {self.git_work_dir}, pulling latest...")
+                subprocess.run(['git', 'fetch', 'origin', self.branch],
+                               cwd=self.git_work_dir, check=True, capture_output=True, timeout=30)
+                subprocess.run(['git', 'reset', '--hard', f'origin/{self.branch}'],
+                               cwd=self.git_work_dir, check=True, capture_output=True)
+                logger.info("✅ Git repository synced with remote")
+                return
+            except subprocess.CalledProcessError as e:
+                logger.warning(f"Failed to sync existing repo, will re-clone: {e}")
+                shutil.rmtree(self.git_work_dir, ignore_errors=True)
+
         try:
-            logger.info(f"Initializing git repository in {self.repo_path}")
-            
-            # Initialize git repo
-            subprocess.run(['git', 'init'], cwd=self.repo_path, check=True, capture_output=True)
-            
+            # Clean up and create fresh directory
+            if self.git_work_dir.exists():
+                shutil.rmtree(self.git_work_dir)
+            self.git_work_dir.mkdir(parents=True, exist_ok=True)
+
+            logger.info(f"Cloning repository to {self.git_work_dir}")
+
+            # Clone only the docs folder using sparse checkout for efficiency
+            subprocess.run(['git', 'clone', '--filter=blob:none', '--sparse', '--depth=1',
+                            remote_url, str(self.git_work_dir)],
+                           check=True, capture_output=True, timeout=60)
+
             # Configure git
-            subprocess.run(['git', 'config', 'user.name', 'Railway Bot'], cwd=self.repo_path, check=True, capture_output=True)
-            subprocess.run(['git', 'config', 'user.email', 'bot@railway.app'], cwd=self.repo_path, check=True, capture_output=True)
-            
-            # Add remote
-            remote_url = 'https://github.com/2vlad/vlad-podcast.git'
-            subprocess.run(['git', 'remote', 'add', 'origin', remote_url], cwd=self.repo_path, check=True, capture_output=True)
-            
-            # Fetch main branch
-            logger.info("Fetching main branch from remote...")
-            subprocess.run(['git', 'fetch', 'origin', self.branch], cwd=self.repo_path, check=True, capture_output=True, timeout=30)
-            
-            # Checkout main branch from remote (creates local tracking branch)
-            subprocess.run(['git', 'checkout', '-b', self.branch, f'origin/{self.branch}'], cwd=self.repo_path, check=True, capture_output=True)
-            
-            logger.info("✅ Git repository initialized and synced with remote")
+            subprocess.run(['git', 'config', 'user.name', 'Railway Bot'],
+                           cwd=self.git_work_dir, check=True, capture_output=True)
+            subprocess.run(['git', 'config', 'user.email', 'bot@railway.app'],
+                           cwd=self.git_work_dir, check=True, capture_output=True)
+
+            # Set sparse checkout to only include docs folder
+            subprocess.run(['git', 'sparse-checkout', 'set', 'docs'],
+                           cwd=self.git_work_dir, check=True, capture_output=True)
+
+            logger.info("✅ Git repository cloned and configured")
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to initialize git repository: {e.stderr if e.stderr else e}")
+            stderr = e.stderr.decode() if e.stderr else str(e)
+            logger.error(f"Failed to initialize git repository: {stderr}")
         except Exception as e:
             logger.error(f"Error initializing git repository: {e}")
     
     def _run_git_command(self, command: list[str]) -> tuple[bool, str]:
         """
         Run a git command and return success status and output.
-        
+
         Args:
             command: Git command as list of strings
-            
+
         Returns:
             Tuple of (success: bool, output: str)
         """
         try:
-            logger.info(f"Running: {' '.join(command)} in {self.repo_path}")
+            logger.info(f"Running: {' '.join(command)} in {self.git_work_dir}")
             result = subprocess.run(
                 command,
-                cwd=self.repo_path,
+                cwd=self.git_work_dir,
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -140,24 +158,28 @@ class GitHubPublisher:
     
     def sync_rss_to_docs(self, rss_file: Path) -> bool:
         """
-        Copy RSS file to docs directory for GitHub Pages.
-        
+        Copy RSS file to docs directory in git work directory for GitHub Pages.
+
         Args:
             rss_file: Path to source RSS file
-            
+
         Returns:
             True if successful
         """
         import shutil
-        
+
         try:
-            # Ensure docs directory exists
-            self.docs_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Copy RSS file
-            dest_rss = self.docs_dir / "rss.xml"
+            # Copy to git work directory's docs folder
+            git_docs_dir = self.git_work_dir / "docs"
+            git_docs_dir.mkdir(parents=True, exist_ok=True)
+
+            dest_rss = git_docs_dir / "rss.xml"
             shutil.copy2(rss_file, dest_rss)
-            
+
+            # Also copy to local docs_dir for consistency
+            self.docs_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(rss_file, self.docs_dir / "rss.xml")
+
             logger.info(f"Synced RSS file to {dest_rss}")
             return True
         except Exception as e:
@@ -218,24 +240,24 @@ class GitHubPublisher:
     def upload_to_release(self, file_path: Path, release_tag: str = "media-files") -> bool:
         """
         Upload a file to GitHub Release.
-        
+
         Args:
             file_path: Path to the file to upload
             release_tag: GitHub Release tag (default: media-files)
-            
+
         Returns:
             True if successful
         """
         if not file_path.exists():
             logger.error(f"File not found: {file_path}")
             return False
-        
+
         try:
             # Check if file already exists in release
-            check_cmd = ["gh", "release", "view", release_tag, "--json", "assets", "-q", f".assets[].name"]
+            check_cmd = ["gh", "release", "view", release_tag, "--json", "assets", "-q", ".assets[].name"]
             result = subprocess.run(
                 check_cmd,
-                cwd=self.repo_path,
+                cwd=self.git_work_dir,
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -251,7 +273,7 @@ class GitHubPublisher:
             upload_cmd = ["gh", "release", "upload", release_tag, str(file_path), "--clobber"]
             result = subprocess.run(
                 upload_cmd,
-                cwd=self.repo_path,
+                cwd=self.git_work_dir,
                 capture_output=True,
                 text=True,
                 timeout=120
