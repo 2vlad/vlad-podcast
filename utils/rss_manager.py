@@ -3,7 +3,7 @@ RSS feed generation and management for podcast episodes.
 """
 
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from feedgen.feed import FeedGenerator
 from feedgen.entry import FeedEntry
@@ -362,6 +362,10 @@ class RSSManager:
                 # so we'd need to regenerate the feed
                 logger.warning(f"Feed has {len(entries)} items, but max is {max_items}. Trimming not yet implemented.")
         
+        # Update lastBuildDate to current time (important for podcast apps to detect updates)
+        fg.lastBuildDate(datetime.now(timezone.utc))
+        logger.debug("Updated lastBuildDate to current time")
+
         # Write RSS file
         try:
             logger.debug(f"Writing RSS to file: {rss_file}")
